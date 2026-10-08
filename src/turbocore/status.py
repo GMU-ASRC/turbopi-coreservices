@@ -41,7 +41,10 @@ def check_interface(name):
     path = pl.Path(f"/sys/class/net/{name}")
     if not (path / 'operstate').exists():
         return None
-    return (path / 'operstate').read_text().strip() == 'up'
+    connected = (path / 'operstate').read_text().strip() == 'up'
+    if connected:
+        print(f"Connected to {name}")
+    return connected
 
 
 def get_operstates():
@@ -50,8 +53,11 @@ def get_operstates():
 
 
 def check_connectivity(dest='8.8.8.8', timeout=1):
-    return subprocess.run(
+    res = subprocess.run(
         f"ping -c 1 -W {timeout} {dest}", shell=True).returncode == 0
+    if res:
+        print(f"Connected to {dest}")
+    return res
 
 
 def quickbeep():
