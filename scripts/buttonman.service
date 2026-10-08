@@ -5,7 +5,7 @@ Description=start buttonman.py
 Type=simple
 Restart=always
 RestartSec=5
-ExecStart=/turbopy/.venv/bin/python /turbopy/core/buttonman.py
+ExecStart=/turbopy/.venv/bin/python -m turbocore.buttonman
 ExecStop=/bin/systemctl kill buttonman
 
 [Install]

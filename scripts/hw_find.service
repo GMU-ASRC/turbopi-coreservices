@@ -6,7 +6,7 @@ Description=lobot discovery
 Type=simple
 Restart=always
 RestartSec=5
-ExecStart=/turbopy/.venv/bin/python /turbopy/core/hw_find.py -t TurboPi
+ExecStart=/turbopy/.venv/bin/python -m hw_find -t TurboPi
 ExecStop=/bin/systemctl kill hw_find
 
 [Install]

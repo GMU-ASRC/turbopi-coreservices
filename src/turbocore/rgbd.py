@@ -43,7 +43,7 @@ SK6812W_STRIP = SK6812_STRIP_GRBW
 directory = gettempdir()
 name = "rgbd.pipe"
 path = os.path.join(directory, name)
-print(path)
+# print(path)
 
 if not ISNT:
     os.makedirs(os.path.dirname(path), exist_ok=True)  # ensure that /tmp/ exists

@@ -5,7 +5,7 @@ Description=start rgbd.py
 Type=simple
 Restart=always
 RestartSec=5
-ExecStart=/turbopy/.venv/bin/python /turbopy/core/rgbd.py
+ExecStart=/turbopy/.venv/bin/python -m turbocore.rgbd
 ExecStop=/bin/systemctl kill rgbd
 
 [Install]
