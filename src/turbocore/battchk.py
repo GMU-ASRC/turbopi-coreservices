@@ -244,10 +244,11 @@ def main():
         if not __stop:
             loop()
     if not n:  # if n == 0 or None
+        print("Measuring...")
         cell, measurements = measure_voltage(10)
         print(measurements)
-        print(f"Status:\t\t{voltage_goodness(cell)}")
-        print(f"Cell Voltage:\t{cell:.3f}")
+        print(f"Status: \t\t{voltage_goodness(cell)}")
+        print(f"Avg. Cell Voltage:\t{cell:.3f}")
         return
     while __stop and button_listen and KDN in button_states:
         time.sleep(SPIN_PERIOD)  # trap if waiting for buttons to be unpressed...
@@ -330,9 +331,9 @@ def setup_buttons():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--__listen_button_exit', action='store_true')
-    parser.add_argument('--silent', action='store_true')
-    parser.add_argument('--quiet', action='store_true')
-    parser.add_argument('-s', '--stealth', action='store_true')
+    parser.add_argument('--silent', action='store_true', help="Flash lights but don't beep.")
+    parser.add_argument('-q', '--quiet', action='store_true', help="Flash lights but don't beep.")
+    parser.add_argument('-s', '--stealth', action='store_true', help="Only report battery status to console.")
     parser.add_argument('--watch', action='store_true')
     parser.add_argument('-n', type=int, default=None)
     args = parser.parse_args()
