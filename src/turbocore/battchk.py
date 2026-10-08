@@ -38,6 +38,7 @@ KEY1_PIN = 33
 KEY2_PIN = 16
 KDN = GPIO.LOW
 KUP = GPIO.HIGH
+GPIO.setwarnings(False)
 
 BAD_CELL_VOLTAGE = 3.45
 
