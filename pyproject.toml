@@ -7,7 +7,7 @@ authors = [
 ]
 dependencies = [
   "RPi.GPIO",
-  "statemachine",
+  "python-statemachine",
   "psutil",
   "rpi_ws281x",
 ]
