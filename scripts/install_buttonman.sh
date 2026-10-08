@@ -20,13 +20,10 @@ function update_bashrc {
     fi
 }
 
-echo 'Updating pip'
-
-python -m pip install --upgrade pip
-echo
-echo 'Installing Dependencies'
-echo
-pip install psutil python-statemachine
+# echo
+# echo 'Installing Dependencies'
+# echo
+# uv pip install -e /turbopy/core
 ln -sf /home/pi/boot/buttonman.service /etc/systemd/system/buttonman.service
 echo
 echo 'buttonman service was linked to /etc/systemd/system/buttonman.service'
