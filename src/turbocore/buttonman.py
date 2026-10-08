@@ -124,7 +124,10 @@ class TaskManager:
             pid_dir = PID_DIR
         listing_path = pl.Path(pid_dir)
         listing_path.mkdir(parents=False, exist_ok=True)  # raise error if /tmp does not exist
-        listing_path.chmod(0o666)
+        try:
+            listing_path.chmod(0o666)
+        except PermissionError:
+            pass
 
     @staticmethod
     def process_dict_excerpt(p: psutil.Process):
@@ -146,7 +149,10 @@ class TaskManager:
             pid_dir = PID_DIR
         listing_path = pl.Path(pid_dir)
         listing_path.mkdir(parents=False, exist_ok=True)  # raise error if /tmp does not exist
-        listing_path.chmod(0o666)
+        try:
+            listing_path.chmod(0o666)
+        except PermissionError:
+            pass
         # Note: /tmp is probably guaranteed to exist on POSIX, but sysadmins may choose a different $TMPDIR.
         # See both top answers here: https://unix.stackexchange.com/questions/362100/is-tmp-guaranteed-to-exist
         # We're targeting Raspberry Pi though so who cares.
