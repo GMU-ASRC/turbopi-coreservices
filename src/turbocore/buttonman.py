@@ -124,6 +124,7 @@ class TaskManager:
             pid_dir = PID_DIR
         listing_path = pl.Path(pid_dir)
         listing_path.mkdir(parents=False, exist_ok=True)  # raise error if /tmp does not exist
+        listing_path.chmod(0o666)
 
     @staticmethod
     def process_dict_excerpt(p: psutil.Process):
@@ -145,6 +146,7 @@ class TaskManager:
             pid_dir = PID_DIR
         listing_path = pl.Path(pid_dir)
         listing_path.mkdir(parents=False, exist_ok=True)  # raise error if /tmp does not exist
+        listing_path.chmod(0o666)
         # Note: /tmp is probably guaranteed to exist on POSIX, but sysadmins may choose a different $TMPDIR.
         # See both top answers here: https://unix.stackexchange.com/questions/362100/is-tmp-guaranteed-to-exist
         # We're targeting Raspberry Pi though so who cares.
@@ -154,8 +156,9 @@ class TaskManager:
         with selfp.oneshot():
             info = cls.process_dict_excerpt(selfp)
         info_str = json.dumps(info) + '\n'
-        self_infofile.write_text(info_str)  # OVERWRITES EXISTING!
         # equivalent to opening in 'w' mode; writing; closing.
+        self_infofile.write_text(info_str)  # OVERWRITES EXISTING!
+        self_infofile.chmod(0o666)
 
     @classmethod
     def unregister(cls, pid_dir=None, check_match=True):
@@ -266,6 +269,10 @@ class TaskManager:
                 process.kill()
             path.unlink(missing_ok=True)
         return gone, alive
+
+    def clean_start(self):
+
+        self.close_all_registered()
 
 
 # adapted from https://raspberrypi.stackexchange.com/a/76738/63335
@@ -632,6 +639,13 @@ class ButtonManager:
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--clean', action='store_true')
+    args = parser.parse_args()
+    if args.clean:
+        TaskManager().close_all_registered()
+        sys.exit(0)
     manager = ButtonManager()
     manager.bootup_check()
     manager.initialize_edge_listeners()

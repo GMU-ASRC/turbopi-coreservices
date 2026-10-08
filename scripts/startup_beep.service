@@ -3,6 +3,7 @@ Description=startup beep and connection blink
 
 [Service]
 Type=oneshot
+ExecStartPre=/turbopy/.venv/bin/python -m turbocore.buttonman --clean
 ExecStart=/turbopy/.venv/bin/python -m turbocore.status conn_waiting
 
 [Install]
