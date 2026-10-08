@@ -104,10 +104,10 @@ def all_leds(r, g, b):
 def breath_sonar_red():
     s = front_sonar
     s.set_rgb_mode(1)
-    s.write_breath_register(s.REG_RGB1_R_BREATHING_CYCLE, 100)
+    s.write_breath_register(s.REG_RGB1_R_BREATHING_CYCLE, 400)
     s.write_breath_register(s.REG_RGB1_G_BREATHING_CYCLE, 0)
     s.write_breath_register(s.REG_RGB1_B_BREATHING_CYCLE, 0)
-    s.write_breath_register(s.REG_RGB2_R_BREATHING_CYCLE, 100)
+    s.write_breath_register(s.REG_RGB2_R_BREATHING_CYCLE, 400)
     s.write_breath_register(s.REG_RGB2_G_BREATHING_CYCLE, 0)
     s.write_breath_register(s.REG_RGB2_B_BREATHING_CYCLE, 0)
 
