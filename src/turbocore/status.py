@@ -4,9 +4,12 @@ import argparse
 import subprocess
 import pathlib as pl
 
+import RPi.GPIO as GPIO
 from turbocore import wsrgb
 import turbocore.buttonman as buttonman
 from rasadapter4 import front_sonar, set_buzzer
+
+GPIO.setwarnings(False)
 
 SPIN_PERIOD = 0.100
 
@@ -42,6 +45,7 @@ signal.signal(signal.SIGINT, lambda s, h: stop())
 
 
 def check_interface(name):
+    print(f"Waiting for {name} to connect...")
     path = pl.Path(f"/sys/class/net/{name}")
     if not (path / 'operstate').exists():
         return None
@@ -57,6 +61,7 @@ def get_operstates():
 
 
 def check_connectivity(dest='8.8.8.8', timeout=1):
+    print(f"Pinging {dest}")
     res = subprocess.run(
         f"ping -c 1 -W {timeout} {dest}", shell=True).returncode == 0
     if res:
