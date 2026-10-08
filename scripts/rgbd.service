@@ -1,0 +1,12 @@
+[Unit]
+Description=start rgbd.py
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+ExecStart=/turbopy/.venv/bin/python /turbopy/core/rgbd.py
+ExecStop=/bin/systemctl kill rgbd
+
+[Install]
+WantedBy=multi-user.target
