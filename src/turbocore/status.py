@@ -38,7 +38,7 @@ def stop():
 
 def check_interface(name):
     path = pl.Path(f"/sys/class/net/{name}")
-    if not path.exists(path / 'operstate'):
+    if not (path / 'operstate').exists():
         return None
     return (path / 'operstate').read_text().strip() == 'up'
 
