@@ -63,12 +63,12 @@ rgb_initialized = False
 
 
 def initialize_rgb():
-    global strip
-    if strip:
+    global rgb_initialized
+    if rgb_initialized:
         return
     try:
         wsrgb.setup_default_pixels()
-        strip = True
+        rgb_initialized = True
     except OSError:
         pass
 
