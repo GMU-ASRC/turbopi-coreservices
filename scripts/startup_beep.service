@@ -4,7 +4,6 @@ Description=startup beep and connection blink
 [Service]
 Type=oneshot
 ExecStart=/turbopy/.venv/bin/python -m turbocore.status conn_waiting
-ExecStop=/bin/systemctl kill startup_beep
 
 [Install]
 WantedBy=multi-user.target
