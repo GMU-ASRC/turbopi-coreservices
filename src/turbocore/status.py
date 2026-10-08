@@ -33,7 +33,8 @@ def stop():
     if buttonman:
         buttonman.TaskManager.unregister()
     print("Exiting sonar.py")
-    raise SystemExit  # exit the python script immediately
+    import sys
+    sys.exit()  # exit the python script immediately
 
 
 def check_interface(name):
