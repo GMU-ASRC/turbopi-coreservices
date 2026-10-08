@@ -26,7 +26,7 @@ def write(cmd: bytes, pin: int, data=b''):
     header = struct.pack(HEADER_FORMAT, cmd, pin, len(data))
     packet = header + data
     if cannot_write_pipe(path):
-        return
+        raise IOError('cannot write to pipe')
     with open(path, 'wb') as pipe:
         return pipe.write(packet)
 

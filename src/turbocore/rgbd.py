@@ -232,18 +232,33 @@ def unpack_packets(commands):
             raise ValueError(msg)
 
 
+def loop():
+    with open(path, "rb") as pipe:
+        data = pipe.read()
+        if data:
+            # print(f"{i: >3}: {data}")
+            try:
+                unpack_packets(data)
+            except TypeError as err:
+                print(f"Error: {err}")
+            except struct.error as err:
+                print(f"Error: {err}")
+
+
 if __name__ == '__main__':
-    # Read from and write to the named pipe
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--setup_default_strip', action='store_true')
+    parser.add_argument('--clear_strip', action='store_true')
+    parser.add_argument('--listen', action='store_true')
+    args = parser.parse_args()
+    if args.setup_default_strip or args.clear_strip:
+        setup_default_pixels()
+    if args.clear_strip:
+        set_strip_int(12, [0, 0])
+    if not args.listen:
+        raise SystemExit
     i = 0
     while True:
-        with open(path, "rb") as pipe:
-            data = pipe.read()
-            if data:
-                # print(f"{i: >3}: {data}")
-                try:
-                    unpack_packets(data)
-                except TypeError as err:
-                    print(f"Error: {err}")
-                except struct.error as err:
-                    print(f"Error: {err}")
+        loop()
         i += 1
