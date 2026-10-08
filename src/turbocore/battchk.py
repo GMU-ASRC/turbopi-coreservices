@@ -101,6 +101,17 @@ def all_leds(r, g, b):
     wsrgb.set_pixels(12, [color, color])
 
 
+def breath_sonar_red():
+    s = front_sonar
+    s.set_rgb_mode(1)
+    s.write_breath_register(s.REG_RGB1_R_BREATHING_CYCLE, 100)
+    s.write_breath_register(s.REG_RGB1_G_BREATHING_CYCLE, 0)
+    s.write_breath_register(s.REG_RGB1_B_BREATHING_CYCLE, 0)
+    s.write_breath_register(s.REG_RGB2_R_BREATHING_CYCLE, 100)
+    s.write_breath_register(s.REG_RGB2_G_BREATHING_CYCLE, 0)
+    s.write_breath_register(s.REG_RGB2_B_BREATHING_CYCLE, 0)
+
+
 def ledbeepfor(rgbv, dton, dtoff=0.0):
     if __stop:
         return
@@ -252,16 +263,20 @@ def _watch():
             if total is not None:
                 measurements.append(total / 2)
             waitif(0.49)
-        if measurements and max(measurements) < BAD_CELL_VOLTAGE:
-            print(f"Battery voltage is low: {max(measurements)}."
+        if not measurements:
+            print("err")
+            return
+        best = max(measurements)
+        print(best)
+        if best < BAD_CELL_VOLTAGE:
+            print(f"Battery voltage is low: {best}."
                   " Stopping all registered processes.")
             buttonman.TaskManager().close_all_registered()
             buttonman.stop_board()
             main()
             __stop = False
+            breath_sonar_red()
             waitif(120, spin_period=1)
-    __stop = False
-    waitif(10, spin_period=0.5)
 
 
 def watch():
@@ -273,6 +288,7 @@ def watch():
             _watch()
         except Exception as err:
             print(err)
+        waitif(10, spin_period=0.5)
 
 
 def btn_check():
