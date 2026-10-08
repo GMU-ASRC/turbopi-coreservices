@@ -23,7 +23,7 @@ def waitif(t, spin_period=SPIN_PERIOD):
         return True
 
 
-def stop():
+def stop(exit_code=0):
     global __stop
     __stop = True
     set_buzzer(0)
@@ -34,7 +34,7 @@ def stop():
         buttonman.TaskManager.unregister()
     print("Exiting sonar.py")
     import sys
-    sys.exit()  # exit the python script immediately
+    sys.exit(exit_code)  # exit the python script immediately
 
 
 def check_interface(name):
