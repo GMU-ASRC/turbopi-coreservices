@@ -17,6 +17,10 @@ echo 'Removing symlink /etc/systemd/system/buttonman.service'
 systemctl stop buttonman.service
 systemctl disable buttonman.service
 rm /etc/systemd/system/buttonman.service
+echo 'Removing symlink /etc/systemd/system/startup_beep.service'
+systemctl stop startup_beep.service
+systemctl disable start.service
+rm /etc/systemd/system/start.service
 echo 'Removing symlink /etc/systemd/system/batterywatcher.service'
 systemctl stop batterywatcher.service
 systemctl disable batterywatcher.service

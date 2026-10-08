@@ -56,6 +56,10 @@ echo 'Linking /etc/systemd/system/rgbd.service --> /turbopy/core/scripts/rgbd.se
 ln -sf /turbopy/core/scripts/rgbd.service /etc/systemd/system/rgbd.service
 systemctl enable rgbd.service
 systemctl start rgbd.service
+echo 'Linking /etc/systemd/system/startup_beep.service --> /turbopy/core/scripts/startup_beep.service'
+ln -sf /turbopy/core/scripts/startup_beep.service /etc/systemd/system/startup_beep.service
+systemctl enable startup_beep.service
+systemctl start startup_beep.service
 echo
 echo 'Checking if aliases already installed...'
 update_bashrc "alias batt='/turbopy/.venv/bin/python -m turbocore.battchk'"
