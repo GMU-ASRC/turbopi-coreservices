@@ -10,7 +10,8 @@ import argparse
 
 import RPi.GPIO as GPIO
 
-from rasadapter4 import motors, front_sonar, set_buzzer, battery
+from rasadapter4 import front_sonar, set_buzzer, battery
+from turbocore import wsrgb
 
 
 import warnings
@@ -58,6 +59,19 @@ rgb = {
 
 SPIN_PERIOD = 0.100
 
+rgb_initialized = False
+
+
+def initialize_rgb():
+    global strip
+    if strip:
+        return
+    try:
+        wsrgb.setup_default_pixels()
+        strip = True
+    except OSError:
+        pass
+
 
 def waitif(t, spin_period=SPIN_PERIOD):
     n = t / spin_period
@@ -81,11 +95,8 @@ def all_leds(r, g, b):
     r, g, b = int(r), int(g), int(b)
     color = int.from_bytes(struct.pack('>BBB', r, g, b), 'big')
     front_sonar.fill_color(color)
-    # for i in range(2):
-    #     Board.RGB.setPixelColor(i, Board.PixelColor(r, g, b))
-    #     s.setPixelColor(i, Board.PixelColor(r, g, b))
-    # Board.RGB.show()
-    # s.show()
+    initialize_rgb()
+    wsrgb.set_pixels(12, [color, color])
 
 
 def ledbeepfor(rgbv, dton, dtoff=0.0):
