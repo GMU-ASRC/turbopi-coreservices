@@ -95,7 +95,7 @@ def startup():
 
 
 def conn_waiting():
-    buttonman.TaskManager().register_stoppable()
+    buttonman.TaskManager.register_stoppable()
     start_breathing_blue()
     for _ in range(9999):
         if check_interface('wlan0') or check_interface('eth0') or check_connectivity():

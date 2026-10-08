@@ -95,6 +95,7 @@ def all_leds(r, g, b):
         return
     r, g, b = int(r), int(g), int(b)
     color = int.from_bytes(struct.pack('>BBB', r, g, b), 'big')
+    front_sonar.set_rgb_mode(0)
     front_sonar.fill_color(color)
     initialize_rgb()
     wsrgb.set_pixels(12, [color, color])
@@ -242,6 +243,7 @@ def main():
 
 
 def _watch():
+    global __stop
     cell, _ = measure_voltage(2)
     if cell and cell < BAD_CELL_VOLTAGE:
         measurements = []
@@ -251,17 +253,22 @@ def _watch():
                 measurements.append(total / 2)
             waitif(0.49)
         if measurements and max(measurements) < BAD_CELL_VOLTAGE:
-            print("Battery voltage is low. Stopping all registered processes.")
+            print(f"Battery voltage is low: {max(measurements)}."
+                  " Stopping all registered processes.")
             buttonman.TaskManager().close_all_registered()
             buttonman.stop_board()
             main()
+            __stop = False
             waitif(120, spin_period=1)
+    __stop = False
     waitif(10, spin_period=0.5)
 
 
 def watch():
+    global __stop
     # for constantly checking the voltage
-    while not __stop:
+    while True:
+        __stop = False
         try:
             _watch()
         except Exception as err:

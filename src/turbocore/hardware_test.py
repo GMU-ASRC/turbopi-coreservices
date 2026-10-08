@@ -6,7 +6,7 @@ import signal
 from rasadapter4 import motors, servos, front_sonar, set_buzzer
 try:
     import turbocore.buttonman as buttonman
-    buttonman.TaskManager().close_all_registered()
+    buttonman.TaskManager.register_stoppable()
 except Exception:
     pass
 

@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import time
 from turbocore import wsrgb
 from rasadapter4 import motors, front_sonar, set_buzzer
 try:
@@ -16,8 +17,9 @@ ones = [1, 1, 1, 1]
 motors.speeds = zeros
 motors.speeds = ones
 motors.speeds = zeros
+time.sleep(0.1)
 motors.speeds = ones
-motors.speeds = ones
+time.sleep(0.1)
 motors.speeds = zeros
 motors.speeds = zeros
 set_buzzer(0)
