@@ -35,5 +35,7 @@ removefrom_bashrc "^alias stop="
 if command -v fish &> /dev/null; then
     fish -c "functions --erase batt ; funcsave batt"
     fish -c "functions --erase stop ; funcsave stop"
+    su pi -c "fish -c \"functions --erase batt ; funcsave batt\""
+    su pi -c "fish -c \"functions --erase stop ; funcsave stop\""
 fi
 echo 'Done'

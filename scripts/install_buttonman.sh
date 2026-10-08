@@ -66,6 +66,7 @@ else
 fi
 if command -v fish &> /dev/null; then
     fish -c "alias --save batt '/turbopy/.venv/bin/python -m turbocore.battchk'"
+    su pi -c "fish -c \"alias --save batt '/turbopy/.venv/bin/python -m turbocore.battchk'\""
 fi
 update_bashrc "alias stop='/turbopy/.venv/bin/python -m turbocore.stop'"
 if [ $? -eq 0 ]; then
@@ -75,6 +76,7 @@ else
 fi
 if command -v fish &> /dev/null; then
     fish -c "alias --save stop '/turbopy/.venv/bin/python -m turbocore.stop'"
+    su pi -c "fish -c \"alias --save stop '/turbopy/.venv/bin/python -m turbocore.stop'\""
 fi
 
 echo
