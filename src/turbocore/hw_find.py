@@ -26,16 +26,16 @@ class LOBOTListener:
         self.udp_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udp_server.bind((self.address, self.port))
 
-    def send(self, msg):
-        self.udp_server.sendto(bytes(msg + '\n', encoding='utf-8'), (self.address, self.port))
+    def send(self, addr, msg):
+        self.udp_server.sendto(bytes(msg + '\n', encoding='utf-8'), addr)
 
     def recv(self):
-        data, _addr = self.udp_server.recvfrom(1024)
+        data, addr = self.udp_server.recvfrom(1024)
         msg = str(data, encoding='utf-8')
         if msg == "LOBOT_NET_DISCOVER":
-            self.send(self.ident)
+            self.send(addr, self.ident)
         elif msg == "LOBOT_NET_DISCOVER_HOSTNAME":
-            self.send(self.ident + f":{HOSTNAME}")
+            self.send(addr, self.ident + f":{HOSTNAME}")
 
     def loop(self):
         while True:
