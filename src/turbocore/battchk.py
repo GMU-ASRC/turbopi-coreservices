@@ -10,14 +10,13 @@ import argparse
 
 import RPi.GPIO as GPIO
 
-import turbocore.buttonman as buttonman
 from rasadapter4 import motors, front_sonar, set_buzzer, battery
 
 
 import warnings
 try:
-    import buttonman as buttonman
-except ImportError:
+    import turbocore.buttonman as buttonman
+except (ImportError, ModuleNotFoundError):
     buttonman = None
     warnings.warn("buttonman was not imported, so no processes can be registered. This means the process can't be stopped by buttonman.",  # noqa: E501
                   ImportWarning, stacklevel=2)
