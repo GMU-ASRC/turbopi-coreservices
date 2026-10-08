@@ -1,3 +1,4 @@
+import os
 import struct
 
 from . import rgbd
@@ -7,6 +8,11 @@ from .rgbd import path, BYTEORDER, BOC, HEADER_FORMAT, DATA_FORMATS, AWRGB_FORMA
 def write(cmd: bytes, pin: int, data=b''):
     header = struct.pack(HEADER_FORMAT, cmd, pin, len(data))
     packet = header + data
+    if not os.path.exists(path):
+        from warnings import warn
+        warn("RGBD pipe not found. Is the service running? check w/ journalctl --unit rgbd",
+             RuntimeWarning, 1)
+        return
     with open(path, 'wb') as pipe:
         return pipe.write(packet)
 
