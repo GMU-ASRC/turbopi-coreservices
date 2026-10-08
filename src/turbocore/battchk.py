@@ -2,16 +2,16 @@
 # coding=utf8
 import sys
 import signal
-sys.path.append('/home/pi/TurboPi/')
-sys.path.append('/home/pi/boot/')
 
 import os
 import time
+import struct
 import argparse
 
 import RPi.GPIO as GPIO
-import HiwonderSDK.Board as Board
-import HiwonderSDK.Sonar as Sonar
+
+import turbocore.buttonman as buttonman
+from rasadapter4 import motors, front_sonar, set_buzzer, battery
 
 
 import warnings
@@ -34,7 +34,6 @@ environ_silent = os.environ.get('silent', None)
 do_beeps = environ_silent is None or environ_silent.lower() == 'false'
 do_flash = True
 
-BUZZER_PIN = 31  # board pin numbering
 KEY1_PIN = 33
 KEY2_PIN = 16
 KDN = GPIO.LOW
@@ -46,8 +45,6 @@ n = 10
 __stop = False
 button_listen = False
 button_states = [KUP, KUP]
-
-s = Sonar.Sonar()
 
 rgb = {
     'red': (255, 0, 0),
@@ -76,18 +73,20 @@ def waitif(t, spin_period=SPIN_PERIOD):
 
 def buzzer(value):
     if do_beeps:
-        GPIO.output(BUZZER_PIN, int(bool(value)))
+        set_buzzer(bool(value))
 
 
 def all_leds(r, g, b):
     if not do_flash:
         return
     r, g, b = int(r), int(g), int(b)
-    for i in range(2):
-        Board.RGB.setPixelColor(i, Board.PixelColor(r, g, b))
-        s.setPixelColor(i, Board.PixelColor(r, g, b))
-    Board.RGB.show()
-    s.show()
+    color = int.from_bytes(struct.pack('>BBB', r, g, b), 'big')
+    front_sonar.fill_color(color)
+    # for i in range(2):
+    #     Board.RGB.setPixelColor(i, Board.PixelColor(r, g, b))
+    #     s.setPixelColor(i, Board.PixelColor(r, g, b))
+    # Board.RGB.show()
+    # s.show()
 
 
 def ledbeepfor(rgbv, dton, dtoff=0.0):
@@ -114,7 +113,7 @@ def median(li):
 def voltage_detection():
     try:
         waitif(0.1)
-        v = Board.getBattery() / 1000.0
+        v = battery.voltage
         if 0 < v < 16:
             return v
     except Exception as e:
@@ -215,9 +214,9 @@ def stop():
 
 def main():
     if do_beeps:
-        Board.setBuzzer(0)  # initialize buzzer
+        set_buzzer(0)  # initialize buzzer
     if do_flash:
-        s.setRGBMode(0)
+        front_sonar.set_rgb_mode(0)
     for _ in range(n):
         if not __stop:
             loop()
