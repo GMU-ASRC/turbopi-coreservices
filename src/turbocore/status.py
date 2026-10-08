@@ -1,4 +1,5 @@
 import time
+import signal
 import argparse
 import subprocess
 import pathlib as pl
@@ -32,9 +33,12 @@ def stop(exit_code=0):
     print("status.py will stop soon.")
     if buttonman:
         buttonman.TaskManager.unregister()
-    print("Exiting sonar.py")
+    print("Exiting status.py")
     import sys
     sys.exit(exit_code)  # exit the python script immediately
+
+
+signal.signal(signal.SIGINT, lambda s, h: stop())
 
 
 def check_interface(name):
@@ -92,7 +96,6 @@ def conn_waiting():
         if check_interface('wlan0') or check_interface('eth0') or check_connectivity():
             quickbeep()
             break
-    stop()
 
 
 # def wifi_waiting():
@@ -102,7 +105,6 @@ def conn_waiting():
 #         if check_interface('wlan0'):
 #             quickbeep()
 #             break
-#     stop()
 
 
 actions = {
@@ -116,3 +118,4 @@ if __name__ == '__main__':
     parser.add_argument(choices=actions, dest='action')
     args = parser.parse_args()
     actions[args.action]()
+    stop()
