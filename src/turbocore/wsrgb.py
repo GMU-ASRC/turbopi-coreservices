@@ -1,17 +1,31 @@
 import os
 import struct
 
+
 from . import rgbd
 from .rgbd import path, BYTEORDER, BOC, HEADER_FORMAT, DATA_FORMATS, AWRGB_FORMAT, WRGB_FORMAT
+
+
+def cannot_write_pipe(path):
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_NONBLOCK)
+    except OSError:
+        from warnings import warn
+        warn(f"RGBD pipe {path} couldn't be opened."
+             " Is the service running? check w/ journalctl --unit rgbd",
+             RuntimeWarning, 1)
+        return True
+    finally:
+        try:
+            os.close(fd)
+        except (NameError, OSError):
+            pass
 
 
 def write(cmd: bytes, pin: int, data=b''):
     header = struct.pack(HEADER_FORMAT, cmd, pin, len(data))
     packet = header + data
-    if not os.path.exists(path):
-        from warnings import warn
-        warn("RGBD pipe not found. Is the service running? check w/ journalctl --unit rgbd",
-             RuntimeWarning, 1)
+    if cannot_write_pipe(path):
         return
     with open(path, 'wb') as pipe:
         return pipe.write(packet)
