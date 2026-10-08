@@ -125,7 +125,7 @@ class TaskManager:
         listing_path = pl.Path(pid_dir)
         listing_path.mkdir(parents=False, exist_ok=True)  # raise error if /tmp does not exist
         try:
-            listing_path.chmod(0o666)
+            listing_path.chmod(0o777)
         except PermissionError:
             pass
 
@@ -150,7 +150,7 @@ class TaskManager:
         listing_path = pl.Path(pid_dir)
         listing_path.mkdir(parents=False, exist_ok=True)  # raise error if /tmp does not exist
         try:
-            listing_path.chmod(0o666)
+            listing_path.chmod(0o777)
         except PermissionError:
             pass
         # Note: /tmp is probably guaranteed to exist on POSIX, but sysadmins may choose a different $TMPDIR.
@@ -164,7 +164,7 @@ class TaskManager:
         info_str = json.dumps(info) + '\n'
         # equivalent to opening in 'w' mode; writing; closing.
         self_infofile.write_text(info_str)  # OVERWRITES EXISTING!
-        self_infofile.chmod(0o666)
+        self_infofile.chmod(0o777)
 
     @classmethod
     def unregister(cls, pid_dir=None, check_match=True):

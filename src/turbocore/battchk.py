@@ -315,7 +315,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if not args.watch:
-        buttonman.TaskManager.register_stoppable()
+        try:
+            buttonman.TaskManager.register_stoppable()
+        except Exception as e:
+            warnings.warn("buttonman.TaskManager.register_stoppable() failed. This means the process can't be stopped by buttonman.\n"  # noqa: E501
+                          + e, RuntimeWarning, stacklevel=2)
 
     if args.silent or args.quiet:
         do_beeps = False
