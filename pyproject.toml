@@ -10,6 +10,8 @@ dependencies = [
   "python-statemachine",
   "psutil",
   "rpi_ws281x",
+  "textual",
+  "rich",
 ]
 description = "Code to interface with HiWonder Rasadapter for TurboPi"
 readme = "README.md"

@@ -13,6 +13,11 @@ import RPi.GPIO as GPIO
 from rasadapter4 import front_sonar, set_buzzer, battery
 from turbocore import wsrgb
 
+try:
+    from rich import print
+    import rich
+except (ImportError, ModuleNotFoundError):
+    rich = None
 
 import warnings
 try:
@@ -61,6 +66,10 @@ rgb = {
 SPIN_PERIOD = 0.100
 
 rgb_initialized = False
+
+
+def clamp(x, xmin, xmax):
+    return min(xmax, max(xmin, x))
 
 
 def initialize_rgb():
@@ -157,12 +166,12 @@ def voltage_color(voltage: float):
     return (100, 0, 100)
 
 
-def voltage_goodness(voltage: float):
+def voltage_goodness(voltage: float | None):
     if voltage is None:
         return "[░░░░░] ERROR"
-    if 0.8 <= voltage < 3.3:
+    if 0.8 <= voltage < 3.4:
         return "[    ]  VERY LOW CHARGE IMMEDIATELY"
-    if 3.3 <= voltage < 3.5:
+    if 3.4 <= voltage < 3.5:
         return "[■   ] Low "
     if 3.5 <= voltage < 3.7:
         return "[■■  ] Normal"
@@ -173,6 +182,49 @@ def voltage_goodness(voltage: float):
     if 4.05 <= voltage < 5:
         return "[■■■■] Full"
     return "[░░░░░] ERROR"
+
+
+def rich_goodness(voltage: float | None):
+    """print extra bar/info below"""
+    from rich.style import Style
+    from rich.color_triplet import ColorTriplet
+    from rich.color import blend_rgb, Color
+    from rich.progress_bar import ProgressBar
+    console = rich.get_console()
+    red = ColorTriplet(200, 0, 0)
+    yellow = ColorTriplet(255, 255, 0)
+    green = ColorTriplet(40, 255, 0)
+    if voltage is None:
+        style = Style(color=Color.parse('#111111'), bgcolor=Color.parse('#BBBBBB'),
+                      blink=True, blink2=True)
+        console.print("      -- Measurement Error --      ", style=style)
+        console.print()
+        return
+    elif voltage < 3.2:
+        style = Style(color=Color.parse('#666666'), bgcolor=Color.parse('#FF2000'),
+                      blink=True, blink2=True, bold=True)
+        console.print("    CRITICALLY LOW   STOP AND CHARGE NOW    ", style=style)
+        console.print()
+        return
+    amount = voltage * 20 - 64
+    amount = clamp(amount, 0, 20)
+    if amount > 10:
+        color = blend_rgb(yellow, green, cross_fade=(amount - 10) / 10)
+    else:
+        color = blend_rgb(red, yellow, cross_fade=amount / 10)
+    color = [clamp(x, 0, 255) for x in color]
+    style = Style(color=Color.from_rgb(*color))
+    bar = ProgressBar(
+        width=20,
+        total=20,
+        completed=round(amount),
+        style=Style(color=Color.parse('#777777')),
+        complete_style=style,
+        finished_style=style,
+    )
+    console.show_cursor(False)
+    console.print(bar)
+    console.print()
 
 
 def decimal_split(x: float, precision=1, mode='digit'):
@@ -247,8 +299,9 @@ def main():
         print("Measuring...")
         cell, measurements = measure_voltage(10)
         print(measurements)
-        print(f"Status: \t\t{voltage_goodness(cell)}")
         print(f"Avg. Cell Voltage:\t{cell:.3f}")
+        print(f"Status: \t\t{voltage_goodness(cell)}")
+        rich_goodness(cell)
         return
     while __stop and button_listen and KDN in button_states:
         time.sleep(SPIN_PERIOD)  # trap if waiting for buttons to be unpressed...
