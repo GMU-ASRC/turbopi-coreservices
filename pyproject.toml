@@ -6,7 +6,7 @@ authors = [
   { name="Kevin Zhu", email="kzhu4@gmu.edu" },
 ]
 dependencies = [
-  "rpi-lgpio",
+  "RPi.GPIO",
   "python-statemachine",
   "psutil",
   "rpi_ws281x",
