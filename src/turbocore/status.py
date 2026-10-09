@@ -103,13 +103,13 @@ def conn_waiting():
             break
 
 
-# def wifi_waiting():
-#     buttonman.TaskManager().register_stoppable()
-#     start_breathing_blue()
-#     for _ in range(9999):
-#         if check_interface('wlan0'):
-#             quickbeep()
-#             break
+def wifi_waiting():
+    buttonman.TaskManager().register_stoppable()
+    start_breathing_blue()
+    for _ in range(9999):
+        if check_interface('wlan0'):
+            quickbeep()
+            break
 
 
 actions = {

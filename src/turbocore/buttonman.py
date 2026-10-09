@@ -451,12 +451,13 @@ class ActionMachine(statemachine.StateMachine):
     def do_3c(self):
         # subprocess.Popen("sudo python3 /home/pi/boot/battchk.py".split(' '))
         self.disable()
-        os.system("sudo python3 /home/pi/boot/battchk.py --__listen_button_exit")
+        os.system("/turbopy/.venv/bin/python -m turbocore.battchk --__listen_button_exit")
         self.enable()
 
     def do_4c(self):
         reset_wifi()
         led_setup()
+        subprocess.Popen("/turbopy/.venv/bin/python -m turbocore.status wifi_waiting".split(' '))
         ButtonManager.ap_off_beep()
 
     def do_1H(self):
@@ -467,10 +468,11 @@ class ActionMachine(statemachine.StateMachine):
         TaskManager().close_all_registered()
 
     def do_3H(self):
-        subprocess.Popen("sudo python3 /home/pi/boot/hardware_test.py".split(' '))
+        subprocess.Popen("/turbopy/.venv/bin/python -m turbocore.hardware_test".split(' '))
 
     def do_4H(self):
         start_ap()
+        # subprocess.Popen("/turbopy/.venv/bin/python -m turbocore.status ap_start".split(' '))
         ButtonManager.ap_beep()
 
     def do_5c(self):
@@ -513,15 +515,12 @@ class ButtonManager:
         self.key2_sm.holding = lambda: asm.send('b2_add_H')
         self.key2_sm.done = lambda: asm.send('reset')
 
-    @staticmethod
-    def buzzer(value):
-        GPIO.output(BUZZER_PIN, int(bool(value)))
-
     @classmethod
     def buzzfor(cls, dton, dtoff=0.0):
-        cls.buzzer(1)
+        from rasadapter4 import set_buzzer
+        set_buzzer(1)
         time.sleep(dton)
-        cls.buzzer(0)
+        set_buzzer(0)
         time.sleep(dtoff)
 
     def btn_event(self, channel, state):
