@@ -68,10 +68,12 @@ def stop_board():
         ones = [1, 1, 1, 1]
         # spam
         motors.speeds = zeros
-        motors.speeds = ones
+        motors.speeds = [5, 5, 5, 5]
         motors.speeds = zeros
+        time.sleep(0.1)
         motors.speeds = ones
         motors.speeds = ones
+        time.sleep(0.1)
         motors.speeds = zeros
         motors.speeds = zeros
         set_buzzer(0)
@@ -83,14 +85,12 @@ def stop_board():
 
 
 def reset_wifi():
-    os.system("systemctl stop hw_wifi.service > /dev/null 2>&1")
-    os.system("systemctl restart wpa_supplicant.service > /dev/null 2>&1")
-    os.system("systemctl restart dhcpcd.service > /dev/null 2>&1")
+    subprocess.Popen("nmcli con down HW-AP".split(' '))
+    subprocess.Popen("systemctl restart NetworkManager.service".split(' '))
 
 
 def start_ap():
-    os.system("rm /etc/Hiwonder/* -rf > /dev/null 2>&1")
-    os.system("systemctl restart hw_wifi.service > /dev/null 2>&1")
+    try_script("/turbopy/core/scripts/start_ap.sh")
 
 
 def led_setup():
@@ -472,7 +472,7 @@ class ActionMachine(statemachine.StateMachine):
 
     def do_4H(self):
         start_ap()
-        # subprocess.Popen("/turbopy/.venv/bin/python -m turbocore.status ap_start".split(' '))
+        try_script("/turbopy/core/scripts/start_ap.sh")
         ButtonManager.ap_beep()
 
     def do_5c(self):
