@@ -30,9 +30,6 @@ systemctl stop rgbd.service
 systemctl disable rgbd.service
 echo 'Removing symlink /etc/systemd/system/rgbd.service'
 rm /etc/systemd/system/rgbd.service
-echo 'Enabling hw_button_scan.service'
-systemctl enable hw_button_scan.service
-systemctl start hw_button_scan.service
 echo 'Removing aliases from bashrc'
 removefrom_bashrc "^alias batt="
 removefrom_bashrc "^alias stop="

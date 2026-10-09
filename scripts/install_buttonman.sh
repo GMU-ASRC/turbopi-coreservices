@@ -24,7 +24,7 @@ function update_bashrc {
 # echo 'Installing Dependencies'
 # echo
 # uv pip install -e /turbopy/core
-ln -sf /home/pi/boot/buttonman.service /etc/systemd/system/buttonman.service
+ln -sf /turbopy/core/scripts/buttonman.service /etc/systemd/system/buttonman.service
 echo
 echo 'buttonman service was linked to /etc/systemd/system/buttonman.service'
 echo
