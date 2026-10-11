@@ -1,10 +1,7 @@
-import os
-import stat
 import struct
-from tempfile import gettempdir
+from .pindaemon import ISROOT, BOC, unpack_packet_start, loop_read, mkpipe
 
-ISNT = os.name == 'nt'
-ISROOT = not ISNT and os.geteuid() == 0
+
 if ISROOT:
     try:
         import rpi_ws281x as ws
@@ -13,6 +10,9 @@ if ISROOT:
         print("rpi_ws281x not found.")
 else:
     ws = None
+
+
+PIPEPATH = "rgbd.pipe"
 
 
 # DEFINE constants from swigged ws2811.h (in case rpi_ws281x hasn't loaded yet)
@@ -38,28 +38,6 @@ WS2811_STRIP_BGR = 0x00000810
 WS2812_STRIP = WS2811_STRIP_GRB
 SK6812_STRIP = WS2811_STRIP_GRB
 SK6812W_STRIP = SK6812_STRIP_GRBW
-
-
-directory = gettempdir()
-name = "rgbd.pipe"
-path = os.path.join(directory, name)
-# print(path)
-
-if not ISNT:
-    os.makedirs(os.path.dirname(path), exist_ok=True)  # ensure that /tmp/ exists
-
-
-if os.path.exists(path):
-    is_fifo = os.stat(path).st_mode & stat.S_IFIFO
-    # if path is not pipe, remove it
-    if ISROOT:
-        if not is_fifo:
-            os.unlink(path)
-            os.mkfifo(path, mode=0o666)
-        os.chmod(path, 0o666)
-else:
-    os.mkfifo(path, mode=0o666)
-    os.chmod(path, 0o666)
 
 
 strips = {}
@@ -159,14 +137,10 @@ def set_strip_int(pin, array):
     strip.show()
 
 
-BYTEORDER = 'little'
-BOC = '<' if BYTEORDER == 'little' else '>'  # byte order character for struct
 WRGB_FORMAT = BOC + 'L'
 WRGB_SIZE = struct.calcsize(WRGB_FORMAT)
 AWRGB_FORMAT = BOC + 'BL'
 AWRGB_SIZE = struct.calcsize(AWRGB_FORMAT)
-HEADER_FORMAT = BOC + f'shH'
-HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
 
 
 DATA_FORMATS = {
@@ -189,28 +163,8 @@ def unpack_unaddressed(data):
     return [x[0] for x in struct.iter_unpack(WRGB_FORMAT, data) if x and len(x) == 1]
 
 
-def unpack_packet_inner(actions, remainder):
-    header = remainder[:HEADER_SIZE]
-    remainder = remainder[HEADER_SIZE:]
-    if len(header) != HEADER_SIZE:
-        # not enough data to continue. bail out.
-        return actions
-    action, pin, size = struct.unpack(HEADER_FORMAT, header)
-    packed_data = remainder[:size]
-    remainder = remainder[size:]
-    if len(packed_data) < size or size > 2000:
-        # packet is lying/incomplete. Possible corruption.
-        return actions
-    if packed_data:
-        actions.append((action, pin, packed_data))
-    if remainder:
-        return unpack_packet_inner(actions, remainder)
-    else:
-        return actions
-
-
 def unpack_packets(commands):
-    actions = unpack_packet_inner([], commands)
+    actions = unpack_packet_start([], commands)
     for action, pin, data in actions:
         a = str(action)[1:].strip('\'')
         print(f"{a:>3s} pin {pin: >3}: {data}")
@@ -232,19 +186,6 @@ def unpack_packets(commands):
             raise ValueError(msg)
 
 
-def loop():
-    with open(path, "rb") as pipe:
-        data = pipe.read()
-        if data:
-            # print(f"{i: >3}: {data}")
-            try:
-                unpack_packets(data)
-            except TypeError as err:
-                print(f"Error: {err}")
-            except struct.error as err:
-                print(f"Error: {err}")
-
-
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
@@ -252,6 +193,9 @@ if __name__ == '__main__':
     parser.add_argument('--clear_strip', action='store_true')
     parser.add_argument('--listen', action='store_true')
     args = parser.parse_args()
+
+    mkpipe(PIPEPATH)
+
     if args.setup_default_strip or args.clear_strip:
         setup_default_pixels()
     if args.clear_strip:
@@ -260,5 +204,5 @@ if __name__ == '__main__':
         raise SystemExit
     i = 0
     while True:
-        loop()
+        loop_read(PIPEPATH, unpack_packets)
         i += 1

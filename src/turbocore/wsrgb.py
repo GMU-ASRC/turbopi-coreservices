@@ -2,33 +2,9 @@ import os
 import struct
 
 
+from .rgbd import DATA_FORMATS, AWRGB_FORMAT, WRGB_FORMAT, PIPEPATH
 from . import rgbd
-from .rgbd import path, BYTEORDER, BOC, HEADER_FORMAT, DATA_FORMATS, AWRGB_FORMAT, WRGB_FORMAT
-
-
-def cannot_write_pipe(path):
-    try:
-        fd = os.open(path, os.O_WRONLY | os.O_NONBLOCK)
-    except OSError:
-        from warnings import warn
-        warn(f"RGBD pipe {path} couldn't be opened."
-             " Is the service running? check w/ journalctl --unit rgbd",
-             RuntimeWarning, 1)
-        return True
-    finally:
-        try:
-            os.close(fd)
-        except (NameError, OSError):
-            pass
-
-
-def write(cmd: bytes, pin: int, data=b''):
-    header = struct.pack(HEADER_FORMAT, cmd, pin, len(data))
-    packet = header + data
-    if cannot_write_pipe(path):
-        raise IOError('cannot write to pipe')
-    with open(path, 'wb') as pipe:
-        return pipe.write(packet)
+from .pindaemon import write_pin_cmd
 
 
 def rgbw_to_int(r, g, b, w=0):
@@ -48,7 +24,7 @@ def set_pixel(pin, i, r=0, g=None, b=None, w=None):
         rgb = rgbw_to_int(r, g, b, w)
     else:
         raise ValueError
-    write(CMD, pin, struct.pack(AWRGB_FORMAT, i, rgb))
+    write_pin_cmd(PIPEPATH, pin, CMD, struct.pack(AWRGB_FORMAT, i, rgb))
 
 
 def set_pixels(pin, array):
@@ -70,7 +46,7 @@ def set_pixels(pin, array):
         data = b''.join(struct.pack(AWRGB_FORMAT, i, rgb_int) for i, rgb_int in array)
     else:
         data = b''.join(struct.pack(WRGB_FORMAT, rgb_int) for rgb_int in array)
-    write(cmd, pin, data)
+    write_pin_cmd(PIPEPATH, pin, cmd, data)
 
 
 def setup(
@@ -87,7 +63,7 @@ def setup(
     fmts = DATA_FORMATS[cmd]
     data = (num_leds, freq_hz, dma, invert, brightness, channel, strip_type)
     strip = struct.pack(fmts, *data)
-    write(cmd, pin, strip)
+    write_pin_cmd(PIPEPATH, pin, cmd, strip)
 
 
 def setup_default_pixels(
