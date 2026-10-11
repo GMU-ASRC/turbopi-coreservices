@@ -13,23 +13,19 @@ function removefrom_bashrc {
     return
 }
 
-echo 'Removing symlink /etc/systemd/system/buttonman.service'
-systemctl stop buttonman.service
-systemctl disable buttonman.service
-rm /etc/systemd/system/buttonman.service
-echo 'Removing symlink /etc/systemd/system/startup_beep.service'
-systemctl stop startup_beep.service
-systemctl disable start.service
-rm /etc/systemd/system/start.service
-echo 'Removing symlink /etc/systemd/system/batterywatcher.service'
-systemctl stop batterywatcher.service
-systemctl disable batterywatcher.service
-rm /etc/systemd/system/batterywatcher.service
-echo 'Stopping rgbd.service (RGB daemon)'
-systemctl stop rgbd.service
-systemctl disable rgbd.service
-echo 'Removing symlink /etc/systemd/system/rgbd.service'
-rm /etc/systemd/system/rgbd.service
+function remove_service {
+    NAME=$1
+    echo "Removing symlink /etc/systemd/system/$NAME"
+    systemctl stop $NAME
+    systemctl disable $NAME
+    rm /etc/systemd/system/$NAME
+}
+
+remove_service buttonman.service
+remove_service startup_beep.service
+remove_service batterywatcher.service
+remove_service rgbd.service
+
 echo 'Removing aliases from bashrc'
 removefrom_bashrc "^alias batt="
 removefrom_bashrc "^alias stop="
