@@ -48,8 +48,8 @@ systemctl disable hw_find.service
 rm /etc/systemd/system/hw_find.service
 add_core_service hw_find.service
 add_core_service rgbd.service
-add_core_service startup_beep.service
 add_core_service buzzerd.service
+add_core_service startup_beep.service
 echo
 echo 'Checking if aliases already installed...'
 update_bashrc "alias batt='/turbopy/.venv/bin/python -m turbocore.battchk'"
