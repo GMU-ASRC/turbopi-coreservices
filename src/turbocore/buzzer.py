@@ -1,6 +1,11 @@
+import os
 import struct
+import tempfile
 from .pindaemon import write_pin_cmd, BOC
-from .buzzerd import PIPEPATH
+# from .buzzerd import PIPEPATH  # causes issues with module level auto-import of set_buzzer
+
+
+PIPEPATH = os.path.join(tempfile.gettempdir(), 'buzzerd.pipe')
 
 
 def setup_pin_out(pin: int, initial: bool | None = None):
@@ -23,6 +28,7 @@ DEFAULT_BUZZER_PIN = 6  # GPIO 6, board pin 31 on RPi4b
 
 
 def set_buzzer(state: bool):
+    global buzzer
     if buzzer is None:
         buzzer = 6
         setup_pin_out(buzzer, initial=state)
