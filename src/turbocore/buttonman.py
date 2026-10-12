@@ -492,7 +492,6 @@ class ButtonManager:
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(KEY1_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         GPIO.setup(KEY2_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.setup(BUZZER_PIN, GPIO.OUT)
 
         self.lock = threading.Lock()
         self.sequence = []
