@@ -5,9 +5,9 @@ import subprocess
 import pathlib as pl
 
 import RPi.GPIO as GPIO
-from turbocore import wsrgb
+from turbocore import wsrgb, set_buzzer
 import turbocore.buttonman as buttonman
-from rasadapter4 import front_sonar, set_buzzer
+from rasadapter4 import front_sonar
 
 GPIO.setwarnings(False)
 

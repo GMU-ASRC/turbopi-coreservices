@@ -53,8 +53,8 @@ LED2_PIN = 26
 
 def stop_board():
     try:
-        from turbocore import wsrgb
-        from rasadapter4 import motors, front_sonar, set_buzzer
+        from turbocore import wsrgb, set_buzzer
+        from rasadapter4 import motors, front_sonar
         try:
             import turbocore.buttonman as buttonman
             buttonman.TaskManager().close_all_registered()
@@ -517,7 +517,7 @@ class ButtonManager:
 
     @classmethod
     def buzzfor(cls, dton, dtoff=0.0):
-        from rasadapter4 import set_buzzer
+        from turbocore import set_buzzer
         set_buzzer(1)
         time.sleep(dton)
         set_buzzer(0)

@@ -3,7 +3,7 @@
 import sys
 import time
 import signal
-from rasadapter4 import motors, servos, front_sonar, set_buzzer
+from rasadapter4 import motors, servos, front_sonar
 try:
     import turbocore.buttonman as buttonman
     buttonman.TaskManager.register_stoppable()

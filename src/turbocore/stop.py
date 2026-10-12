@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 import time
-from turbocore import wsrgb
-from rasadapter4 import motors, front_sonar, set_buzzer
+from turbocore import wsrgb, set_buzzer
+from rasadapter4 import motors, front_sonar
 try:
     import turbocore.buttonman as buttonman
     buttonman.TaskManager().close_all_registered()

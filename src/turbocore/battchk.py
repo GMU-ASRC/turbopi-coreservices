@@ -10,8 +10,8 @@ import argparse
 
 import RPi.GPIO as GPIO
 
-from rasadapter4 import front_sonar, set_buzzer, battery
-from turbocore import wsrgb
+from rasadapter4 import front_sonar, battery
+from turbocore import wsrgb, set_buzzer
 
 try:
     from rich import print
