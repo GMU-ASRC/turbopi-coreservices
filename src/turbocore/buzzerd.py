@@ -50,10 +50,4 @@ def unpack_packets(commands):
 
 
 if __name__ == '__main__':
-    i = 0
-    while True:
-        try:
-            loop_read(PIPEPATH, unpack_packets)
-        except Exception as e:
-            print(e)
-        i += 1
+    loop_read(PIPEPATH, unpack_packets)

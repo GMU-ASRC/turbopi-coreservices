@@ -84,8 +84,7 @@ def unpack_packet_start(actions, remainder, size_limit=2000):
     if len(packed_data) < size or size > size_limit:
         # packet is lying/incomplete. Possible corruption.
         return actions
-    if packed_data:
-        actions.append((action, pin, packed_data))
+    actions.append((action, pin, packed_data))
     if remainder:
         return unpack_packet_start(actions, remainder, size_limit)
     else:
@@ -93,13 +92,16 @@ def unpack_packet_start(actions, remainder, size_limit=2000):
 
 
 def loop_read(path: str | os.PathLike, func: Callable):
+    i = 0
     with open(path, "rb") as pipe:
-        data = pipe.read()
-        if data:
-            # print(f"{i: >3}: {data}")
+        while True:
             try:
-                func(data)
-            except TypeError as err:
-                print(f"Error: {err}")
-            except struct.error as err:
-                print(f"Error: {err}")
+                data = pipe.read()
+                if data:
+                    print(f"{i: >3}: {data}")
+                    func(data)
+            # except struct.error as err:
+            # except TypeError as err:
+            except Exception as e:
+                print(e)
+            i += 1

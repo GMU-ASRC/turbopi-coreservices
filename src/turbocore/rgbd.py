@@ -201,7 +201,4 @@ if __name__ == '__main__':
         set_strip_int(12, [0, 0])
     if not args.listen:
         raise SystemExit
-    i = 0
-    while True:
-        loop_read(PIPEPATH, unpack_packets)
-        i += 1
+    loop_read(PIPEPATH, unpack_packets)
