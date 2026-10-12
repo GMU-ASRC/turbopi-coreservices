@@ -1,11 +1,6 @@
-import os
 import struct
-import tempfile
 from .pindaemon import write_pin_cmd, BOC
-# from .buzzerd import PIPEPATH  # causes issues with module level auto-import of set_buzzer
-
-
-PIPEPATH = os.path.join(tempfile.gettempdir(), 'buzzerd.pipe')
+from .buzzer_pipe import PIPEPATH
 
 
 def setup_pin_out(pin: int, initial: bool | None = None):

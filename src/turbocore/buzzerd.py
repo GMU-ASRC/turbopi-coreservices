@@ -1,12 +1,8 @@
 import struct
 import RPi.GPIO as GPIO
 
-from .pindaemon import mkpipe, unpack_packet_start, loop_read, BOC
-
-PIPENAME = "buzzer.pipe"
-PIPEPATH = mkpipe(PIPENAME)
-
-GPIO.setmode(GPIO.BCM)
+from .pindaemon import unpack_packet_start, loop_read, BOC
+from .buzzer_pipe import PIPEPATH
 
 GPIO.setmode(GPIO.BCM)
 
