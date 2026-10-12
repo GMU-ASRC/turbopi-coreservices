@@ -26,9 +26,9 @@ def cannot_write_pipe(path):
         fd = os.open(path, os.O_WRONLY | os.O_NONBLOCK)
     except OSError:
         from warnings import warn
-        warn(f"RGBD pipe {path} couldn't be opened."
+        warn(f"pipe {path} couldn't be opened."
              " Is the service running? check w/ journalctl --unit rgbd",
-             RuntimeWarning, 1)
+             RuntimeWarning, 3)
         return True
     finally:
         try:
@@ -66,9 +66,10 @@ def mkpipe(name: str | os.PathLike):
                 os.unlink(path)
                 os.mkfifo(path, mode=0o666)
             os.chmod(path, 0o666)
-    else:
+    elif ISROOT:
         os.mkfifo(path, mode=0o666)
         os.chmod(path, 0o666)
+    return path
 
 
 def unpack_packet_start(actions, remainder, size_limit=2000):

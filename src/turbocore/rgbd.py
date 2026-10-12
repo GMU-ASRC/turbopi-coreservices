@@ -12,7 +12,8 @@ else:
     ws = None
 
 
-PIPEPATH = "rgbd.pipe"
+PIPENAME = "rgbd.pipe"
+PIPEPATH = mkpipe(PIPENAME)
 
 
 # DEFINE constants from swigged ws2811.h (in case rpi_ws281x hasn't loaded yet)
@@ -193,8 +194,6 @@ if __name__ == '__main__':
     parser.add_argument('--clear_strip', action='store_true')
     parser.add_argument('--listen', action='store_true')
     args = parser.parse_args()
-
-    mkpipe(PIPEPATH)
 
     if args.setup_default_strip or args.clear_strip:
         setup_default_pixels()
