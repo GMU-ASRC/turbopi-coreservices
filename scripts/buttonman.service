@@ -5,6 +5,7 @@ Description=start buttonman.py
 Type=simple
 Restart=always
 RestartSec=5
+Environment=PYTHONUNBUFFERED=1
 ExecStart=/turbopy/.venv/bin/python -m turbocore.buttonman
 ExecStop=/bin/systemctl kill buttonman
 

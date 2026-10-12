@@ -6,6 +6,7 @@ Description=lobot discovery
 Type=simple
 Restart=always
 RestartSec=5
+Environment=PYTHONUNBUFFERED=1
 ExecStart=/turbopy/.venv/bin/python -m turbocore.hw_find -t TurboPi
 ExecStop=/bin/systemctl kill hw_find
 

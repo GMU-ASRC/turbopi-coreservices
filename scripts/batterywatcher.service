@@ -5,6 +5,7 @@ Description=battery watchdog
 Type=simple
 Restart=always
 RestartSec=5
+Environment=PYTHONUNBUFFERED=1
 ExecStart=/turbopy/.venv/bin/python -m turbocore.battchk --watch
 ExecStop=/bin/systemctl kill batterywatcher
 
