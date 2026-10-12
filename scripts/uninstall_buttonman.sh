@@ -25,6 +25,7 @@ remove_service buttonman.service
 remove_service startup_beep.service
 remove_service batterywatcher.service
 remove_service rgbd.service
+remove_service buzzerd.service
 
 echo 'Removing aliases from bashrc'
 removefrom_bashrc "^alias batt="

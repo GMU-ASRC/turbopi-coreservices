@@ -1,0 +1,12 @@
+[Unit]
+Description=start buzzerd.py
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+ExecStart=/turbopy/.venv/bin/python -m turbocore.buzzerd
+ExecStop=/bin/systemctl kill buzzerd
+
+[Install]
+WantedBy=multi-user.target
