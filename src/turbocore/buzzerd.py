@@ -17,7 +17,10 @@ def unpack_packets(commands):
         print(f"{a:>3s} pin {pin: >3}: {data}")
         if action == b'S':
             state = struct.unpack(BOC + '?', data)[0]
-            GPIO.setup(pin, GPIO.OUT, initial=state)
+            if pin not in pins:  # need to avoid double setup
+                GPIO.setup(pin, GPIO.OUT, initial=state)
+            else:
+                GPIO.output(pin, state)
             pins[pin] = GPIO.OUT
         elif action == b's':
             GPIO.setup(pin, GPIO.OUT)
@@ -49,5 +52,8 @@ def unpack_packets(commands):
 if __name__ == '__main__':
     i = 0
     while True:
-        loop_read(PIPEPATH, unpack_packets)
+        try:
+            loop_read(PIPEPATH, unpack_packets)
+        except Exception as e:
+            print(e)
         i += 1
