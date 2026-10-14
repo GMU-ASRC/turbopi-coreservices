@@ -459,8 +459,9 @@ class ActionMachine(statemachine.StateMachine):
     def do_4c(self):
         reset_wifi()
         led_setup()
+        from turbocore.status import ap_off_beep
+        ap_off_beep()
         subprocess.Popen("/turbopy/.venv/bin/python -m turbocore.status wifi_waiting".split(' '))
-        ButtonManager.ap_off_beep()
 
     def do_1H(self):
         TaskManager().close_all_registered()
@@ -474,8 +475,7 @@ class ActionMachine(statemachine.StateMachine):
 
     def do_4H(self):
         start_ap()
-        try_script("/turbopy/core/scripts/start_ap.sh")
-        ButtonManager.ap_beep()
+        subprocess.Popen("/turbopy/.venv/bin/python -m turbocore.status hwap_waiting".split(' '))
 
     def do_5c(self):
         try_script("/home/pi/program5.sh")
@@ -514,14 +514,6 @@ class ButtonManager:
 
         asm.disable = self.clear_claims
         asm.enable = self.start_listening_both
-
-    @classmethod
-    def buzzfor(cls, dton, dtoff=0.0):
-        from turbocore import set_buzzer
-        set_buzzer(1)
-        time.sleep(dton)
-        set_buzzer(0)
-        time.sleep(dtoff)
 
     def btn_event(self, channel, state):
         t = time.time_ns()
@@ -624,7 +616,8 @@ class ButtonManager:
             print("wifi reset triggered")
             # reset_wifi()
             start_ap()
-            self.ap_beep()
+            from turbocore.status import ap_beep
+            ap_beep()
 
         self.sequence = []
         self.serviced = True
@@ -654,25 +647,11 @@ class ButtonManager:
             sm.send('pushed' if event == KDN else 'released', t=t)
         now = time.time_ns()
         # if not any(key == KEY1_PIN for key, _, _ in sequence):
-            # self.key1_sm.cycle(t=now)
+        #     self.key1_sm.cycle(t=now)
         # if not any(key == KEY2_PIN for key, _, _ in sequence):
         self.key2_sm.cycle(t=now)
 
         self.wait_cycle()
-
-    @classmethod
-    def ap_beep(cls):
-        cls.buzzfor(.1, .1)
-        cls.buzzfor(.1, .1)
-        cls.buzzfor(.1, .12)
-        cls.buzzfor(.3, .2)
-
-    @classmethod
-    def ap_off_beep(cls):
-        cls.buzzfor(.3, .08)
-        cls.buzzfor(.08, .06)
-        cls.buzzfor(.1, .13)
-        cls.buzzfor(.08, .2)
 
 
 if __name__ == "__main__":

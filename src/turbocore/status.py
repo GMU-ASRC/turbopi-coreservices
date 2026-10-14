@@ -9,7 +9,6 @@ from turbocore import wsrgb, set_buzzer
 import turbocore.buttonman as buttonman
 from rasadapter4 import front_sonar
 
-GPIO.setwarnings(False)
 
 SPIN_PERIOD = 0.100
 
@@ -41,18 +40,52 @@ def stop(exit_code=0):
     sys.exit(exit_code)  # exit the python script immediately
 
 
-signal.signal(signal.SIGINT, lambda s, h: stop())
+def cmdout(cmd):
+    return subprocess.run(cmd, shell=True, capture_output=True).stdout.decode('utf-8').strip()
 
 
-def check_interface(name):
-    print(f"Waiting for {name} to connect...")
+def get_nmcli(cmd, fields=()):
+    if isinstance(fields, str):
+        fields = (fields,)
+    sfields = ','.join(fields)
+    if fields:
+        cmd = f"--fields='{sfields}' {cmd}"
+    try:
+        out = cmdout(f"nmcli {cmd}")
+    except Exception as e:
+        print(e)
+        return None
+    if len(fields) == 1:
+        return out.split(':')[-1].strip()
+    return {
+        k: v.strip()
+        for line in out.splitlines()
+        for k, v in [line.split(':', 1)]
+    }
+
+
+def get_interface_conname(name, ignore_con=()):
     path = pl.Path(f"/sys/class/net/{name}")
     if not (path / 'operstate').exists():
         return None
     connected = (path / 'operstate').read_text().strip() == 'up'
     if connected:
-        print(f"Connected to {name}")
-    return connected
+        conname = get_nmcli(f"device show {name}", 'GENERAL.CONNECTION')
+        if conname in ignore_con:
+            return False
+        if not conname:
+            return ' '
+        return conname
+    return False
+
+
+def check_interface(name, ignore_con=()):
+    print(f"Waiting for {name} to connect...")
+    conname = get_interface_conname(name, ignore_con)
+    if not conname:
+        return False
+    print(f"Connected to {name} ({conname})")
+    return bool(conname)
 
 
 def get_operstates():
@@ -77,15 +110,42 @@ def quickbeep():
     set_buzzer(0)
 
 
-def start_breathing_blue():
+def ap_beep():
+    from turbocore.buzzer import buzzfor
+    buzzfor(.1, .1)
+    buzzfor(.1, .1)
+    buzzfor(.1, .12)
+    buzzfor(.3, .2)
+
+
+def ap_off_beep():
+    from turbocore.buzzer import buzzfor
+    buzzfor(.3, .08)
+    buzzfor(.08, .06)
+    buzzfor(.1, .13)
+    buzzfor(.08, .2)
+
+
+def start_breathing_blue(t=2000):
     s = front_sonar
     s.set_rgb_mode(1)
     s.write_breath_register(s.REG_RGB1_R_BREATHING_CYCLE, 0)
     s.write_breath_register(s.REG_RGB1_G_BREATHING_CYCLE, 0)
-    s.write_breath_register(s.REG_RGB1_B_BREATHING_CYCLE, 2000)
+    s.write_breath_register(s.REG_RGB1_B_BREATHING_CYCLE, t)
     s.write_breath_register(s.REG_RGB2_R_BREATHING_CYCLE, 0)
     s.write_breath_register(s.REG_RGB2_G_BREATHING_CYCLE, 0)
-    s.write_breath_register(s.REG_RGB2_B_BREATHING_CYCLE, 2000)
+    s.write_breath_register(s.REG_RGB2_B_BREATHING_CYCLE, t)
+
+
+def start_breathing_green(t=3000):
+    s = front_sonar
+    s.set_rgb_mode(1)
+    s.write_breath_register(s.REG_RGB1_R_BREATHING_CYCLE, 0)
+    s.write_breath_register(s.REG_RGB1_G_BREATHING_CYCLE, t)
+    s.write_breath_register(s.REG_RGB1_B_BREATHING_CYCLE, 0)
+    s.write_breath_register(s.REG_RGB2_R_BREATHING_CYCLE, 0)
+    s.write_breath_register(s.REG_RGB2_G_BREATHING_CYCLE, t)
+    s.write_breath_register(s.REG_RGB2_B_BREATHING_CYCLE, 0)
 
 
 def startup():
@@ -97,16 +157,24 @@ def startup():
 def conn_waiting():
     buttonman.TaskManager.register_stoppable()
     start_breathing_blue()
-    for _ in range(9999):
-        if check_interface('wlan0') or check_interface('eth0') or check_connectivity():
+    for i in range(9999):
+        if (
+            check_interface('wlan0', ignore_con=('HW-AP',))
+            or check_interface('eth0')
+            or check_connectivity()
+        ):
             quickbeep()
             break
+        elif i > 5 and get_interface_conname('wlan0') == 'HW-AP':
+            ap_beep()
+            breath_green_wait()
         waitif(0.5)
 
 
-def wifi_waiting():
+def wifi_waiting(min_time=2):
     buttonman.TaskManager().register_stoppable()
     start_breathing_blue()
+    waitif(min_time)
     for _ in range(9999):
         if check_interface('wlan0'):
             quickbeep()
@@ -114,9 +182,34 @@ def wifi_waiting():
         waitif(0.5)
 
 
+def hwap_waiting():
+    buttonman.TaskManager().register_stoppable()
+    start_breathing_green()
+    i = 0  # avoid unbound var warning
+    for i in range(1200):
+        if get_interface_conname('wlan0') == 'HW-AP':
+            ap_beep()
+            break
+        waitif(0.5)
+        i = i  # explicit assignment to avoid code checker warning
+    if i < 4:
+        breath_green_wait()
+
+
+def breath_green_wait(t=3000):
+    buttonman.TaskManager().register_stoppable()
+    start_breathing_green(t)
+    waitif(t)
+    front_sonar.set_rgb_mode(0)
+    front_sonar.fill_color(0)
+
+
 actions = {
     'startup': startup,
     'conn_waiting': conn_waiting,
+    'wifi_waiting': wifi_waiting,
+    'hwap_waiting': hwap_waiting,
+    'breath_green_wait': breath_green_wait,
 }
 
 
@@ -125,4 +218,7 @@ if __name__ == '__main__':
     parser.add_argument(choices=actions, dest='action')
     args = parser.parse_args()
     actions[args.action]()
+
+    GPIO.setwarnings(False)
+    signal.signal(signal.SIGINT, lambda s, h: stop())
     stop()
