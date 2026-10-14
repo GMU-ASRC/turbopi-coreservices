@@ -101,6 +101,7 @@ def conn_waiting():
         if check_interface('wlan0') or check_interface('eth0') or check_connectivity():
             quickbeep()
             break
+        waitif(0.5)
 
 
 def wifi_waiting():
@@ -110,6 +111,7 @@ def wifi_waiting():
         if check_interface('wlan0'):
             quickbeep()
             break
+        waitif(0.5)
 
 
 actions = {
