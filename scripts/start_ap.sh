@@ -20,6 +20,7 @@ if [ -z "$APUUID" ]; then
     sudo nmcli con add type wifi ifname wlan0 mode ap con-name HW-AP ssid "$SSID"
     # https://networkmanager.dev/docs/api/latest/nm-settings-nmcli.html#:~:text=connection%2Edown%2Don%2Dpoweroff
     sudo nmcli con modify HW-AP connection.down-on-poweroff 1  # default(-1), no(0), yes(1)
+    sudo nmcli con modify HW-AP connection.autoconnect no
 fi
 # https://networkmanager.dev/docs/api/latest/nm-settings-nmcli.html#:~:text=802%2D11%2Dwireless%2Eband
 sudo nmcli con modify HW-AP 802-11-wireless.band bg
