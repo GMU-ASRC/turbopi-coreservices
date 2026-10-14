@@ -80,7 +80,6 @@ def get_interface_conname(name, ignore_con=()):
 
 
 def check_interface(name, ignore_con=()):
-    print(f"Waiting for {name} to connect...")
     conname = get_interface_conname(name, ignore_con)
     if not conname:
         return False
@@ -157,6 +156,7 @@ def startup():
 def conn_waiting():
     buttonman.TaskManager.register_stoppable()
     start_breathing_blue()
+    print("Waiting for network connection...")
     for i in range(9999):
         if (
             check_interface('wlan0', ignore_con=('HW-AP',))
@@ -174,6 +174,7 @@ def conn_waiting():
 def wifi_waiting(min_time=2):
     buttonman.TaskManager().register_stoppable()
     start_breathing_blue()
+    print(f"Waiting for wifi connection...")
     waitif(min_time)
     for _ in range(9999):
         if check_interface('wlan0'):
@@ -185,6 +186,7 @@ def wifi_waiting(min_time=2):
 def hwap_waiting():
     buttonman.TaskManager().register_stoppable()
     start_breathing_green()
+    print("Waiting for HW-AP connection...")
     i = 0  # avoid unbound var warning
     for i in range(1200):
         if get_interface_conname('wlan0') == 'HW-AP':
@@ -196,10 +198,13 @@ def hwap_waiting():
         breath_green_wait()
 
 
-def breath_green_wait(t=3000):
+def breath_green_wait(ms=3000):
     buttonman.TaskManager().register_stoppable()
-    start_breathing_green(t)
-    waitif(t)
+    front_sonar.set_rgb_mode(0)
+    front_sonar.fill_color(0x00FF00)
+    waitif(0.01)
+    start_breathing_green(ms)
+    waitif(ms * 3 / 2000)
     front_sonar.set_rgb_mode(0)
     front_sonar.fill_color(0)
 
