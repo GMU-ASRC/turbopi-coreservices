@@ -301,7 +301,8 @@ def main():
         print(measurements)
         print(f"Avg. Cell Voltage:\t{cell:.3f}")
         print(f"Status: \t\t{voltage_goodness(cell)}")
-        rich_goodness(cell)
+        if rich:
+            rich_goodness(cell)
         return
     while __stop and button_listen and KDN in button_states:
         time.sleep(SPIN_PERIOD)  # trap if waiting for buttons to be unpressed...

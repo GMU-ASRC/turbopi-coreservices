@@ -22,7 +22,7 @@ except ImportError:
 import RPi.GPIO as GPIO
 
 # typing
-from typing import Any
+from typing import Any, Literal
 
 
 PID_DIR = "/tmp/buttonman"
@@ -429,6 +429,7 @@ class ActionMachine(statemachine.StateMachine):
     b2_add_H |= invalid.from_(cccc, ccccc, cccccc, H, cH, ccH, cccH)
 
     reset = invalid.to(idle)
+    reset |= idle.to.itself()
     reset |= idle.from_(c, after='do_1c')
     reset |= idle.from_(cc, after='do_2c')
     reset |= idle.from_(ccc, after='do_3c')
@@ -437,8 +438,8 @@ class ActionMachine(statemachine.StateMachine):
     reset |= idle.from_(cccccc, after='do_6c')
     reset |= idle.from_(H, cH, ccH, cccH)
 
-    disable = lambda: None  # noqa: E731
-    enable = lambda: None  # noqa: E731
+    disable = lambda self: None  # noqa: E731
+    enable = lambda self: None  # noqa: E731
 
     def do_1c(self):
         try_script("/home/pi/program1.sh")
@@ -490,8 +491,6 @@ class ButtonManager:
     def __init__(self) -> None:
 
         GPIO.setmode(GPIO.BCM)
-        GPIO.setup(KEY1_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.setup(KEY2_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
         self.lock = threading.Lock()
         self.sequence = []
@@ -499,17 +498,17 @@ class ButtonManager:
 
         self.t_next = time.time_ns() + 100
         self.spin_period = 100E-3 * 1E9
-        self.bouncetime = 40
+        self.bouncetime = 45
 
-        self.key1_debouncer = None
-        self.key2_debouncer = None
+        self.debouncers: dict[int, ButtonDebouncer] = {}
+
+        asm = self.actionsm
+        asm.disable = self.clear_claims
+        asm.enable = self.start_listening_both
 
         self.key1_sm = PushStateMachine()
         self.key2_sm = PushStateMachine()
         self.actionsm = ActionMachine()
-        asm = self.actionsm
-        asm.disable = self.remove_edge_listeners
-        asm.enable = self.initialize_edge_listeners
         self.key2_sm.short_press = lambda: asm.send('b2_add_c')
         self.key2_sm.holding = lambda: asm.send('b2_add_H')
         self.key2_sm.done = lambda: asm.send('reset')
@@ -531,25 +530,56 @@ class ButtonManager:
         self.lock.release()
         # print(f"Key {1 if channel == KEY1_PIN else 2} {'down' if state == KDN else 'up'}")
 
-    def initialize_edge_listeners(self, bouncetime=None):
-        print("Adding edge listeners")
+    def start_listen_pin(self, keyi: Literal[1, 2], bouncetime=None,):
+        print("Initializing edge listener on key", keyi)
         if bouncetime is None:
             bouncetime = self.bouncetime
-        self.key1_debouncer = ButtonDebouncer(KEY1_PIN, self.btn_event, bouncetime=bouncetime)
-        self.key2_debouncer = ButtonDebouncer(KEY2_PIN, self.btn_event, bouncetime=bouncetime)
-        self.key1_debouncer.start()
-        self.key2_debouncer.start()
-        GPIO.add_event_detect(KEY1_PIN, GPIO.BOTH, callback=self.key1_debouncer)
-        GPIO.add_event_detect(KEY2_PIN, GPIO.BOTH, callback=self.key2_debouncer)
+        if keyi == 1:
+            pin = KEY1_PIN
+        elif keyi == 2:
+            pin = KEY2_PIN
+        else:
+            msg = f"keyi must be 1 or 2, not {keyi}"
+            raise ValueError(msg)
+        GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        debouncer = ButtonDebouncer(pin, self.btn_event, bouncetime=bouncetime)
+        self.debouncers[keyi] = debouncer
+        debouncer.start()
+        GPIO.add_event_detect(pin, GPIO.BOTH, callback=debouncer)
 
-    def remove_edge_listeners(self):
+    def start_listening_both(self, bouncetime=None):
+        self.start_listening_both(1, bouncetime=bouncetime)
+        self.start_listening_both(2, bouncetime=bouncetime)
+
+    def clear_claim_pin(self, keyi: Literal[1, 2]):
+        print("Removing edge listener on key", keyi)
+        if keyi == 1:
+            pin = KEY1_PIN
+        elif keyi == 2:
+            pin = KEY2_PIN
+        else:
+            msg = f"keyi must be 1 or 2, not {keyi}"
+            raise ValueError(msg)
+        if keyi in self.debouncers and self.debouncers[keyi].is_alive():
+            for i in range(3):
+                try:
+                    self.debouncers[keyi].join(timeout=self.bouncetime * (i + 1))
+                except RuntimeError as err:
+                    print(f"Failed to stop debouncer thread for key {keyi}: {err}")
+            if self.debouncers[keyi].is_alive():
+                print(f"Failed to stop debouncer thread for key {keyi}:"
+                      " timed out while waiting to acquire thread lock")
+            del self.debouncers[keyi]
+        GPIO.remove_event_detect(pin)
+
+    def clear_claims(self):
         print("Removing edge listeners")
-        GPIO.remove_event_detect(KEY1_PIN)
-        GPIO.remove_event_detect(KEY2_PIN)
+        self.clear_claim_pin(1)
+        self.clear_claim_pin(2)
 
     def bootup_check(self):
         print("Bootup period... if key 1 is held, AP mode will be set.")
-        self.initialize_edge_listeners(45)
+        self.start_listening_both(45)
 
         if not self.sequence and GPIO.input(KEY1_PIN) == KDN:
             self.sequence = [(KEY1_PIN, KDN, time.time_ns())]
@@ -560,7 +590,7 @@ class ButtonManager:
         time.sleep(6)
 
         # stop listening
-        self.remove_edge_listeners()
+        self.clear_claims()
 
         # if the button is still held down, add a corresponding up entry
         if GPIO.input(KEY1_PIN) == KDN:
@@ -652,7 +682,7 @@ if __name__ == "__main__":
         sys.exit(0)
     manager = ButtonManager()
     manager.bootup_check()
-    manager.initialize_edge_listeners()
+    manager.start_listen_pin(2)
     try:
         subprocess.Popen("/home/pi/boot.sh")
     except FileNotFoundError:
