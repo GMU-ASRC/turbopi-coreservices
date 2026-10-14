@@ -39,8 +39,12 @@ environ_silent = os.environ.get('silent', None)
 do_beeps = environ_silent is None or environ_silent.lower() == 'false'
 do_flash = True
 
-KEY1_PIN = 33
-KEY2_PIN = 16
+# BCM
+KEY1_PIN = 13
+KEY2_PIN = 23
+# BOARD
+# KEY1_PIN = 33
+# KEY2_PIN = 16
 KDN = GPIO.LOW
 KUP = GPIO.HIGH
 GPIO.setwarnings(False)
@@ -371,6 +375,7 @@ def btn_handler(channel, state):
 def setup_buttons():
     global key1_debouncer, key2_debouncer
     print("Adding listeners to stop battchk.py")
+    GPIO.setmode(GPIO.BCM)
     GPIO.setup(KEY1_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(KEY2_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 

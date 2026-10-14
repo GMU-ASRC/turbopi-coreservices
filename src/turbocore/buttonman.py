@@ -452,6 +452,7 @@ class ActionMachine(statemachine.StateMachine):
     def do_3c(self):
         # subprocess.Popen("sudo python3 /home/pi/boot/battchk.py".split(' '))
         self.disable()
+        time.sleep(0.05)
         os.system("/turbopy/.venv/bin/python -m turbocore.battchk --__listen_button_exit")
         self.enable()
 
@@ -502,16 +503,17 @@ class ButtonManager:
 
         self.debouncers: dict[int, ButtonDebouncer] = {}
 
-        asm = self.actionsm
-        asm.disable = self.clear_claims
-        asm.enable = self.start_listening_both
-
         self.key1_sm = PushStateMachine()
         self.key2_sm = PushStateMachine()
         self.actionsm = ActionMachine()
+
+        asm = self.actionsm
         self.key2_sm.short_press = lambda: asm.send('b2_add_c')
         self.key2_sm.holding = lambda: asm.send('b2_add_H')
         self.key2_sm.done = lambda: asm.send('reset')
+
+        asm.disable = self.clear_claims
+        asm.enable = self.start_listening_both
 
     @classmethod
     def buzzfor(cls, dton, dtoff=0.0):
@@ -548,8 +550,8 @@ class ButtonManager:
         GPIO.add_event_detect(pin, GPIO.BOTH, callback=debouncer)
 
     def start_listening_both(self, bouncetime=None):
-        self.start_listening_both(1, bouncetime=bouncetime)
-        self.start_listening_both(2, bouncetime=bouncetime)
+        self.start_listen_pin(1, bouncetime=bouncetime)
+        self.start_listen_pin(2, bouncetime=bouncetime)
 
     def clear_claim_pin(self, keyi: Literal[1, 2]):
         print("Removing edge listener on key", keyi)
@@ -571,6 +573,7 @@ class ButtonManager:
                       " timed out while waiting to acquire thread lock")
             del self.debouncers[keyi]
         GPIO.remove_event_detect(pin)
+        GPIO.cleanup(pin)
 
     def clear_claims(self):
         print("Removing edge listeners")
@@ -589,14 +592,14 @@ class ButtonManager:
 
         time.sleep(6)
 
-        # stop listening
-        self.clear_claims()
-
         # if the button is still held down, add a corresponding up entry
         if GPIO.input(KEY1_PIN) == KDN:
             self.sequence.append((KEY1_PIN, KUP, time.time_ns()))
         # if GPIO.input(KEY2_PIN) == KDN:
         #     self.sequence.append((KEY2_PIN, KUP, time.time_ns()))
+
+        # stop listening
+        self.clear_claims()
 
         # filter out each key in the sequence
         k1_seq = [x for x in self.sequence if x[0] == KEY1_PIN]
