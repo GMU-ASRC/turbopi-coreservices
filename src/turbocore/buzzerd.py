@@ -1,5 +1,8 @@
 """
 Daemon for controlling buzzer, or generally GPIO pins and PWM.
+
+.. hint::
+    You probably don't want to import this module. See :py:mod:`turbocore.buzzer` instead.
 """
 
 

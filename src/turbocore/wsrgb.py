@@ -1,10 +1,31 @@
-import os
+"""
+Control the board's RGB LEDs via the rgbd daemon.
+
+.. seealso::
+    The daemon code: :py:mod:`turbocore.rgbd`
+
+Usage
+-----
+
+.. code-block:: python
+    import wsrgb
+    pin = wsrgb.setup_default_pixels()  # pin 12
+    wsrgb.set_pixels(pin, [0, 0])  # black
+    wsrgb.set_pixels(pin, [0xFF0000, 0x0000FF])  # red and blue
+"""
+
+
 import struct
 
 
 from .rgbd import DATA_FORMATS, AWRGB_FORMAT, WRGB_FORMAT, PIPEPATH
 from . import rgbd
 from .pindaemon import write_pin_cmd
+
+# TODO: add user-friendly color names
+# TODO: fill strip function
+# TODO: off function
+# TODO: object-oriented interface
 
 
 def rgbw_to_int(r, g, b, w=0):
@@ -145,6 +166,7 @@ def setup(
     data = (num_leds, freq_hz, dma, invert, brightness, channel, strip_type)
     strip = struct.pack(fmts, *data)
     write_pin_cmd(PIPEPATH, pin, cmd, strip)
+    return pin
 
 
 def setup_default_pixels(
@@ -158,3 +180,4 @@ def setup_default_pixels(
 ):
     """Convenience command to setup the rasadapter's built-in two neopixels."""
     setup(pin, n, f, dma_channel, invert, brightness, channel)
+    return pin

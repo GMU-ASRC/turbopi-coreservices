@@ -10,6 +10,9 @@ This module contains the functions to read commands from other processes,
 and the functions to actually execute the commands and control the LEDs.
 
 Supports RGB and RGBW LEDs (RGBW is not yet tested).
+
+.. hint::
+    You probably don't want to import this module. See :py:mod:`turbocore.wsrgb` instead.
 """
 
 

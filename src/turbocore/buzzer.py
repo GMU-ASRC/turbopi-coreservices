@@ -1,5 +1,8 @@
 """
 Control the board's buzzer (or GPIO pin) via the buzzerd daemon.
+
+.. seealso::
+    The daemon code: :py:mod:`turbocore.buzzerd`
 """
 
 
