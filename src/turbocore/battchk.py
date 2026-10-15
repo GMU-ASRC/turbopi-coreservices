@@ -427,3 +427,5 @@ if __name__ == "__main__":
         elif button_listen:
             raise ImportError("Requested to run in button stop mode, but buttonman module couldn't be imported! Exiting...")
         main()
+        if buttonman:
+            buttonman.TaskManager.unregister()
