@@ -23,6 +23,11 @@ class ProcessMismatchError(Exception):
 
 
 class TaskManager:
+    """Opt-in management of registered processes.
+
+    Processes may register their PIDs with this class
+    in order to be terminated later.
+    """
     def __init__(self, pid_dir=None):
         self.pid = os.getpid()
         self.pid_dir = pl.Path(PID_DIR)
@@ -38,6 +43,18 @@ class TaskManager:
 
     @staticmethod
     def process_dict_excerpt(p: psutil.Process):
+        """Get process details.
+
+        Get the PID, name, username, cmdline, and create_time of a process.
+
+        Parameters
+        ----------
+        p : psutil.Process
+
+        Returns
+        -------
+        dict
+        """
         if isinstance(p, int):
             p = psutil.Process(p)
         with p.oneshot():
@@ -51,6 +68,22 @@ class TaskManager:
 
     @classmethod
     def register_stoppable(cls, pid_dir=None):
+        """Register a process with the task manager.
+
+        Run this from within your program to allow it to be stopped later.
+
+        Parameters
+        ----------
+        pid_dir : str | os.PathLike, optional
+
+        Examples
+        --------
+        >>> from turbocore import register_stoppable, unregister_stoppable
+        >>> register_stoppable()
+        >>> # do stuff
+        >>> unregister_stoppable()  # clean exit
+        >>> exit()
+        """
         # Run this from within your program to register it to buttonman.
         if pid_dir is None:
             pid_dir = PID_DIR
@@ -75,8 +108,14 @@ class TaskManager:
 
     @classmethod
     def unregister(cls, pid_dir=None, check_match=True):
-        # Run this from within your program to unregister it from buttonman.
-        # Only deletes file if it matches the current process info.
+        """Unregister the current process from the task manager.
+
+        Parameters
+        ----------
+        pid_dir : str | os.PathLike, optional
+        check_match : bool, default=True
+            Only unregister if record matches the current process info.
+        """
         if pid_dir is None:
             pid_dir = PID_DIR
         listing_path = pl.Path(pid_dir)
@@ -109,6 +148,16 @@ class TaskManager:
 
     @staticmethod
     def read_record(path):
+        """Attempt to load the record from json.
+
+        Parameters
+        ----------
+        path : str | os.PathLike
+
+        Returns
+        -------
+        dict
+        """
         path = pl.Path(path)
         # try to load the record as dict from json
         try:
@@ -121,13 +170,31 @@ class TaskManager:
             return err
 
     def close_registered(self, pid: int, timeout=5, ignore_nonexistent=False):
+        """Attempt to close the process if it matches its registration.
+
+        May return FileNotFoundError, JSONDecodeError, psutil.AccessDenied errors.
+
+        If timeout is positive, then it will wait for the process to terminate, and will be killed if the timeout elapses.
+        Otherwise, termination will only be attempted and the process will be returned so you can check on it.
+        If ignore_nonexistent is False (default), FileNotFoundError is RAISED if the process record can't be found.
+        All other errors are raised.
+        If the process is terminated successfully, the return code or -signal is returned. (see comment below)
+
+        Parameters
+        ----------
+        pid : int
+        timeout : float, default=5
+        ignore_nonexistent : bool, default=False
+
+        Returns
+        -------
+        psutil.Process
+        FileNotFoundError
+        JSONDecodeError
+        psutil.AccessDenied
+        """
         # attempt to close the process if it matches its registration.
         # Can return FileNotFoundError, JSONDecodeError
-        # If timeout is positive, then it will wait for the process to terminate, and will be killed if the timeout elapses.
-        # Otherwise, termination will only be attempted and the process will be returned so you can check on it.
-        # If ignore_nonexistent is False (default), FileNotFoundError is RAISED if the process record can't be found.
-        # All other errors are raised.
-        # If the process is terminated successfully, the return code or -signal is returned. (see comment below)
         fpath = self.pid_dir / str(pid)
         if not fpath.exists() and ignore_nonexistent:
             try:
@@ -161,6 +228,8 @@ class TaskManager:
             return ProcessMismatchError(f"Process does not match stored process registration record. Process not terminated. pid: {pid}")  # noqa: E501
 
     def close_all_registered(self, processes=1):
+        """Attempt to close all registered processes.
+        """
         attempts = []
         for child in self.pid_dir.iterdir():
             # exclude directories and .dotfiles

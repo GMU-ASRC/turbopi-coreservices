@@ -1,5 +1,34 @@
 #!/usr/bin/python3
 # coding=utf8
+"""
+Battery checker program and watchdog.
+
+If KEY2 is pressed three times, this program will run in ``check`` mode.
+
+In ``check`` mode, this program sends a sequence of beeps
+to audibly inform the user of the average cell voltage of the battery pack.
+
+For example, if the average cell voltage is 4.0 V, it will beep like this:
+
+.. code-block:: none
+
+    *beep* *beep* *beep* *beep*    *pause*    *short beep*
+
+The short beep indicates a 0 decimal place.
+
+The LEDs will also light up with the pattern and the color will indicate
+good/badness.
+
+This will continue up to 10 times or until the program is stopped by pressing
+either button.
+
+In ``watch`` mode, this program should be started as a service. It will
+check the voltage every half a second. If the voltage is consistently
+too low (below 3.5 V) for over 10 seconds, it will stop all running
+programs and begin the ``check`` routine to warn the user. This may be
+cancelled for up to 2 minutes. The LEDs will also flash red afterwards.
+"""
+
 import sys
 import signal
 
@@ -27,6 +56,8 @@ except (ImportError, ModuleNotFoundError):
     warnings.warn("buttonman was not imported, so no processes can be registered. This means the process can't be stopped by buttonman.",  # noqa: E501
                   ImportWarning, stacklevel=2)
 
+import typing
+
 sys.stdout.reconfigure(encoding="utf-8")
 
 
@@ -39,19 +70,28 @@ environ_silent = os.environ.get('silent', None)
 do_beeps = environ_silent is None or environ_silent.lower() == 'false'
 do_flash = True
 
-# BCM
+# BCM NUMBERING
+#: BCM numbering for GPIO pin 13, board pin 33.
 KEY1_PIN = 13
+#: BCM numbering for GPIO pin 23, board pin 16.
 KEY2_PIN = 23
-# BOARD
-# KEY1_PIN = 33
-# KEY2_PIN = 16
+#: BCM numbering for GPIO pin 6, board pin 31. See :py:mod:`turbocore.buzzer`.
+BUZZER_PIN = 6
 KDN = GPIO.LOW
 KUP = GPIO.HIGH
+#: BCM numbering for GPIO pin 16, board pin 36. Blue status LED1 on rasadapter.
+LED1_PIN = 16
+#: BCM numbering for GPIO pin 26, board pin 37. Green status LED2 on rasadapter.
+LED2_PIN = 26
+
 GPIO.setwarnings(False)
 
+#: Threshold for bad cell voltage.
 BAD_CELL_VOLTAGE = 3.45
 
+#: Number of times to run the beep/flash sequence before stopping.
 n = 10
+
 __stop = False
 button_listen = False
 button_states = [KUP, KUP]
@@ -88,6 +128,22 @@ def initialize_rgb():
 
 
 def waitif(t, spin_period=SPIN_PERIOD):
+    """Wait in chunks of ``spin_period`` seconds.
+
+    This way, if the program is stopped, it will wait at most ``SPIN_PERIOD`` seconds.
+
+    Parameters
+    ----------
+    t : float
+        Time to wait in seconds.
+    spin_period : float, default=SPIN_PERIOD
+        Time to wait in between chunks.
+
+    Returns
+    -------
+    bool
+        True if the program was stopped, False otherwise.
+    """
     n = t / spin_period
     for _ in range(int(n)):
         if __stop:
@@ -104,17 +160,19 @@ def buzzer(value):
 
 
 def all_leds(r, g, b):
+    """Set all the LEDs to the given color."""
     if not do_flash:
         return
     r, g, b = int(r), int(g), int(b)
     color = int.from_bytes(struct.pack('>BBB', r, g, b), 'big')
     front_sonar.set_rgb_mode(0)
-    front_sonar.fill_color(color)
+    front_sonar.fill_color(color)  # front sonar lights
     initialize_rgb()
-    wsrgb.set_pixels(12, [color, color])
+    wsrgb.set_pixels(12, [color, color])  # board neopixels
 
 
 def breath_sonar_red():
+    """Set the front sonar lights to flash red. Non-blocking."""
     s = front_sonar
     s.set_rgb_mode(1)
     s.write_breath_register(s.REG_RGB1_R_BREATHING_CYCLE, 400)
@@ -126,6 +184,7 @@ def breath_sonar_red():
 
 
 def ledbeepfor(rgbv, dton, dtoff=0.0):
+    """Turn on the LEDs and buzzer for a period of time, then stop and wait for another period."""
     if __stop:
         return
     buzzer(1)
@@ -147,6 +206,7 @@ def median(li):
 
 
 def voltage_detection():
+    """Get the total cell voltage."""
     try:
         waitif(0.1)
         v = battery.voltage
@@ -157,6 +217,18 @@ def voltage_detection():
 
 
 def voltage_color(voltage: float):
+    """Specifies a color based on the cell voltage.
+
+    Parameters
+    ----------
+    voltage : float
+        Single-cell voltage in volts (~3.7V)
+
+    Returns
+    -------
+    tuple[int, int, int]
+        RGB color.
+    """
     if voltage < 3.5:
         return rgb['red']
     if 3.5 <= voltage < 3.7:
@@ -171,6 +243,7 @@ def voltage_color(voltage: float):
 
 
 def voltage_goodness(voltage: float | None):
+    """Return a string indicating the battery status."""
     if voltage is None:
         return "[░░░░░] ERROR"
     if 0.8 <= voltage < 3.4:
@@ -189,7 +262,7 @@ def voltage_goodness(voltage: float | None):
 
 
 def rich_goodness(voltage: float | None):
-    """print extra bar/info below"""
+    """Extra pretty bar/info below the battery status"""
     from rich.style import Style
     from rich.color_triplet import ColorTriplet
     from rich.color import blend_rgb, Color
@@ -231,7 +304,31 @@ def rich_goodness(voltage: float | None):
     console.print()
 
 
+if typing.TYPE_CHECKING:
+    from typing import overload
+    @overload
+    def decimal_split(x: float, precision: int = 1, mode: str = 'digit') -> tuple[tuple[int, ...], tuple[int, ...]]: ...
+    @overload
+    def decimal_split(x: float, precision: int = 1, mode: str = 'whole') -> tuple[int, int]: ...
+
+
 def decimal_split(x: float, precision=1, mode='digit'):
+    """Lexically split a float into the whole portion and a decimal portion.
+
+    Parameters
+    ----------
+    x : float
+    precision : int, default=1
+        Number of decimal places for string formatting.
+    mode : str, default='digit'
+        ``'digit'`` to return separate integers for each decimal place,
+        or 'whole' to return just the whole/decimal portions.
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
     x = round(x, precision)
     s = f"{x:.{precision}f}"
     a, b = s.split('.')
@@ -242,6 +339,15 @@ def decimal_split(x: float, precision=1, mode='digit'):
 
 
 def beepn(n, color):
+    """Beep a certain number of times, or do a short beep for ``0``
+
+    Parameters
+    ----------
+    n : int
+        Number of beeps to do.
+    color : tuple[int, int, int]
+        RGB color.
+    """
     if n == 0:
         ledbeepfor(color, .09, .2)
         return
@@ -250,6 +356,18 @@ def beepn(n, color):
 
 
 def measure_voltage(n: int = 1):
+    """Measure the pack voltage ``n`` times and estimate the single-cell voltage.
+
+    Parameters
+    ----------
+    n : int, default=1
+        Number of times to attempt to measure the voltage.
+
+    Returns
+    -------
+    tuple[float, list[float]]
+        Median single-cell voltage, and a list of successful measurements of the pack voltage.
+    """
     measurements = [voltage_detection() for _ in range(n)]
     measurements = [x for x in measurements if x is not None]
     if not measurements:
@@ -260,6 +378,7 @@ def measure_voltage(n: int = 1):
 
 
 def loop():
+    """Main beeping/flashing routine."""
     v, _ = measure_voltage(5)
     color = voltage_color(v)
     a, b = decimal_split(v, precision=1, mode='whole')
@@ -292,6 +411,7 @@ def stop():
 
 
 def main():
+    """Start the main beep/flash routine, or print voltage in stealth mode."""
     if do_beeps:
         set_buzzer(0)  # initialize buzzer
     if do_flash:
@@ -313,9 +433,12 @@ def main():
 
 
 def _watch():
+    """Check if the battery is consistently too low."""
     global __stop
     cell, _ = measure_voltage(2)
+    # if the cell voltage is too low, check if it remains too low for a while
     if cell and cell < BAD_CELL_VOLTAGE:
+        # take 20 measurements over roughly 10 seconds
         measurements = []
         for _ in range(20):
             total = voltage_detection()
@@ -325,6 +448,7 @@ def _watch():
         if not measurements:
             print("err")
             return
+        # if the best measurement is still too low, stop all processes
         best = max(measurements)
         print(best)
         if best < BAD_CELL_VOLTAGE:
@@ -332,15 +456,17 @@ def _watch():
                   " Stopping all registered processes.")
             buttonman.TaskManager().close_all_registered()
             buttonman.stop_board()
-            main()
-            __stop = False
-            breath_sonar_red()
-            waitif(120, spin_period=1)
+            # TODO: try to acquire button so user can cancel the beeping. Would need to release afterwards.
+            main()  # run the main beep/flash routine to warn anybody nearby
+            __stop = False  # reset the stop flag so waitif() works properly
+            breath_sonar_red()  # leave the sonar lights flashing red
+            waitif(120, spin_period=1)  # give the user 2 minutes to cancel
 
 
 def watch():
+    """Battery watchdog routine."""
     global __stop
-    # for constantly checking the voltage
+    # for constantly checking the voltage every 10 seconds
     while True:
         __stop = False
         try:

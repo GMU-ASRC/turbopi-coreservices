@@ -1,3 +1,18 @@
+"""
+Debouncer for button presses.
+
+Even though RPi.GPIO has a built-in debouncer, there are quirks between
+the two implementations (the original rpi-gpio and the newer rpi-lgpio).
+
+The debouncer in this module is closer to that of lgpio, but to keep things
+consistent, we use this.
+
+See https://rpi-lgpio.readthedocs.io/en/latest/differences.html#debounce
+for the differences.
+
+The code in this module is adapted from https://raspberrypi.stackexchange.com/a/76738/63335
+"""
+
 import threading
 
 import RPi.GPIO as GPIO

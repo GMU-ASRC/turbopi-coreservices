@@ -1,6 +1,9 @@
 """
 TaskManager and ButtonManager class for managing button presses and releases.
 
+When a button is clicked a certain number of times, the button manager will
+choose the correct action.
+
 """
 
 
@@ -43,21 +46,30 @@ else:
 
 
 # BCM NUMBERING
+#: BCM numbering for GPIO pin 13, board pin 33.
 KEY1_PIN = 13
+#: BCM numbering for GPIO pin 23, board pin 16.
 KEY2_PIN = 23
+#: BCM numbering for GPIO pin 6, board pin 31. See :py:mod:`turbocore.buzzer`.
 BUZZER_PIN = 6
 KDN = GPIO.LOW
 KUP = GPIO.HIGH
+#: BCM numbering for GPIO pin 16, board pin 36. Blue status LED1 on rasadapter.
 LED1_PIN = 16
+#: BCM numbering for GPIO pin 26, board pin 37. Green status LED2 on rasadapter.
 LED2_PIN = 26
 
 
 def stop_board():
+    """Stop the motors, buzzer, leds, and running programs."""
     try:
         from turbocore import wsrgb, set_buzzer
         from rasadapter4 import motors, front_sonar
         try:
             import turbocore.buttonman as buttonman
+            # note: stopping root processes requires root/sudo.
+            # i.e. the 3-button-click battery checker requires sudo to stop
+            # since that is spawned by this file, which was run by systemd as root.
             buttonman.TaskManager().close_all_registered()
         except Exception:
             pass
@@ -86,15 +98,17 @@ def stop_board():
 
 
 def reset_wifi():
+    """Stop the AP and restart NetworkManager."""
     subprocess.Popen("nmcli con down HW-AP".split(' '))
     subprocess.Popen("systemctl restart NetworkManager.service".split(' '))
 
 
 def start_ap():
+    """Start the access point."""
     try_script("/turbopy/core/scripts/start_ap.sh")
 
 
-def led_setup():
+def led_setup():  # not used
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(LED1_PIN, GPIO.OUT)
     GPIO.output(LED1_PIN, 1)
@@ -103,6 +117,7 @@ def led_setup():
 
 
 def try_script(path):
+    """Run a script if it exists and is executable."""
     if not os.path.isfile(path):
         print(f"Tried to run script but it does not exist: {path}")
         return
@@ -208,6 +223,7 @@ class ActionMachine(statemachine.StateMachine):
 
 
 class ButtonManager:
+    """Manage setup and handling of KEY2 (closer to the USB ports)."""
     beeps = True
 
     def __init__(self) -> None:
@@ -237,15 +253,30 @@ class ButtonManager:
         asm.enable = self.start_listening_both
 
     def btn_event(self, channel, state):
+        """Handle a button event.
+
+        This gets called by the button debouncer.
+
+        See :py:meth:`ButtonManager.spin` for the main loop.
+        """
         t = time.time_ns()
         while not self.lock.acquire_lock():  # SPINLOCK BRR
-            time.sleep(0)
+            time.sleep(0)  # wait until we can safely write to the sequence
         self.sequence.append((channel, state, t))
         self.serviced = False
         self.lock.release()
         # print(f"Key {1 if channel == KEY1_PIN else 2} {'down' if state == KDN else 'up'}")
 
     def start_listen_pin(self, keyi: Literal[1, 2], bouncetime=None,):
+        """Acquire a pin and start listening on it.
+
+        Parameters
+        ----------
+        keyi : Literal[1, 2]
+            1 for KEY1_PIN, 2 for KEY2_PIN
+        bouncetime : float, default=None
+            Used to initialize the button debouncer. Default is :py:attr:`ButtonManager.bouncetime` (45ms).
+        """
         print("Initializing edge listener on key", keyi)
         if bouncetime is None:
             bouncetime = self.bouncetime
@@ -263,10 +294,12 @@ class ButtonManager:
         GPIO.add_event_detect(pin, GPIO.BOTH, callback=debouncer)
 
     def start_listening_both(self, bouncetime=None):
+        """Reserve and start listening to both button pins."""
         self.start_listen_pin(1, bouncetime=bouncetime)
         self.start_listen_pin(2, bouncetime=bouncetime)
 
     def clear_claim_pin(self, keyi: Literal[1, 2]):
+        """Stop listening to and release a button pin."""
         print("Removing edge listener on key", keyi)
         if keyi == 1:
             pin = KEY1_PIN
@@ -289,6 +322,7 @@ class ButtonManager:
         GPIO.cleanup(pin)
 
     def clear_claims(self):
+        """Stop listening and release both pins."""
         print("Removing edge listeners")
         self.clear_claim_pin(1)
         self.clear_claim_pin(2)
@@ -345,6 +379,8 @@ class ButtonManager:
         # print(k1_held_durations)
 
     def wait_cycle(self):
+        # i'm documenting this two years later. i have no idea
+        # if/why this is necessary.
         dt = self.t_next - time.time_ns()  # nanoseconds
         if dt > self.spin_period:
             dt = self.spin_period
@@ -354,8 +390,13 @@ class ButtonManager:
             time.sleep(dt * 1E-9)
 
     def spin(self):
+        """Send button presses to the correct button manager."""
+        # If a button is pressed, the debouncer will need to wait for
+        # the lock in order to record the event.
+        # grab a copy of the sequence to process outside of the lock
+        # spend as little time as possible inside the lock
         while not self.lock.acquire_lock():  # SPINLOCK BRR
-            time.sleep(0)
+            time.sleep(0)  # wait until we can safely write to the sequence
         sequence = self.sequence.copy()
         self.sequence = []
         self.serviced = True
@@ -363,6 +404,7 @@ class ButtonManager:
 
         # print(sequence)
 
+        # send the button presses to the correct button manager
         for key, event, t in sequence:
             sm = self.key1_sm if key == KEY1_PIN else self.key2_sm
             sm.send('pushed' if event == KDN else 'released', t=t)
