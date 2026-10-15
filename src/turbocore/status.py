@@ -1,3 +1,8 @@
+"""
+Provides LED indicator functions for startup sequence and buttonman.
+"""
+
+
 import time
 import signal
 import argparse
@@ -9,6 +14,8 @@ from turbocore import wsrgb, set_buzzer
 import turbocore.buttonman as buttonman
 from rasadapter4 import front_sonar
 
+import typing
+
 
 SPIN_PERIOD = 0.100
 
@@ -16,6 +23,7 @@ __stop = False
 
 
 def waitif(t, spin_period=SPIN_PERIOD):
+    # like time.sleep, but can be interrupted in increments of spin_period
     n = t / spin_period
     for _ in range(int(n)):
         if __stop:
@@ -27,6 +35,7 @@ def waitif(t, spin_period=SPIN_PERIOD):
 
 
 def stop(exit_code=0):
+    # cleanup function
     global __stop
     __stop = True
     set_buzzer(0)
@@ -40,11 +49,43 @@ def stop(exit_code=0):
     sys.exit(exit_code)  # exit the python script immediately
 
 
-def cmdout(cmd):
+def cmdout(cmd: str) -> str:
+    """Run a command and return the output."""
     return subprocess.run(cmd, shell=True, capture_output=True).stdout.decode('utf-8').strip()
 
 
+# TODO: consider switching to python-sdbus-networkmanager?
+# https://github.com/python-sdbus/python-sdbus-networkmanager
+# https://python-sdbus-networkmanager.readthedocs.io/en/latest/
+
+
+if typing.TYPE_CHECKING:
+    from typing import overload
+    @overload
+    def get_nmcli(cmd: str, fields: str | tuple[str]) -> str | None: ...
+    @overload
+    def get_nmcli(cmd: str, fields: typing.Iterable[str]) -> typing.Dict[str, str] | None: ...
+
+
 def get_nmcli(cmd, fields=()):
+    """Run a command and return the output.
+
+    This parses the output of nmcli show commands, which usually look like:
+
+    .. code-block::
+        GENERAL.DEVICE:                         eth0
+        GENERAL.TYPE:                           ethernet
+        GENERAL.HWADDR:                         DA:3A:DD:DD:EE:AA
+        GENERAL.MTU:                            1500
+        GENERAL.STATE:                          100 (connected)
+        GENERAL.CONNECTION:                     netplan-eth0
+
+    The command should be a valid nmcli command, but without the "nmcli".
+
+    You can filter the output by specifying a list of fields.
+    If you specify a single field (str or tuple with one str), the value will be returned as a string.
+    Otherwise, a dictionary keyed by field names will be returned.
+    """
     if isinstance(fields, str):
         fields = (fields,)
     sfields = ','.join(fields)
@@ -65,6 +106,14 @@ def get_nmcli(cmd, fields=()):
 
 
 def get_interface_conname(name, ignore_con=()):
+    """Get the connection name of an interface, if it is up.
+
+    * If the interface cannot be found, returns ``None``.
+    * If the interface is not up, returns ``False``.
+    * If the interface is up but the connection name cannot be determined, returns ``' '`` (truthy).
+    * If the connection name is in ignore_con, returns ``False``.
+    * Otherwise, returns the connection name.
+    """
     path = pl.Path(f"/sys/class/net/{name}")
     if not (path / 'operstate').exists():
         return None
@@ -80,6 +129,20 @@ def get_interface_conname(name, ignore_con=()):
 
 
 def check_interface(name, ignore_con=()):
+    """Check if an interface is connected.
+
+    Parameters
+    ----------
+    name : str
+        Interface name.
+    ignore_con : tuple, default=()
+        Connection names to ignore.
+
+    Returns
+    -------
+    bool
+        True if connected, False otherwise.
+    """
     conname = get_interface_conname(name, ignore_con)
     if not conname:
         return False
@@ -88,11 +151,32 @@ def check_interface(name, ignore_con=()):
 
 
 def get_operstates():
+    """Get the operstate of all network interfaces.
+
+    Returns
+    -------
+    dict
+        Dictionary of interface names to operstates.
+    """
     paths = pl.Path(f"/sys/class/net/").glob('*')
     return {path.name: (path / 'operstate').read_text().strip() for path in paths}
 
 
 def check_connectivity(dest='8.8.8.8', timeout=1):
+    """Check if a host is reachable.
+
+    Parameters
+    ----------
+    dest : str, default='8.8.8.8'
+        Destination host.
+    timeout : int, default=1
+        Timeout in seconds.
+
+    Returns
+    -------
+    bool
+        True if reachable, False otherwise.
+    """
     print(f"Pinging {dest}")
     res = subprocess.run(
         f"ping -c 1 -W {timeout} {dest}", shell=True).returncode == 0
@@ -102,6 +186,7 @@ def check_connectivity(dest='8.8.8.8', timeout=1):
 
 
 def quickbeep():
+    """Beep for 0.3 seconds."""
     set_buzzer(0)
     set_buzzer(1)
     waitif(0.3)
@@ -110,6 +195,7 @@ def quickbeep():
 
 
 def ap_beep():
+    """Beep pattern for starting HW-AP."""
     from turbocore.buzzer import buzzfor
     buzzfor(.1, .1)
     buzzfor(.1, .1)
@@ -118,6 +204,7 @@ def ap_beep():
 
 
 def ap_off_beep():
+    """Beep pattern for re-enabling WiFi."""
     from turbocore.buzzer import buzzfor
     buzzfor(.3, .08)
     buzzfor(.08, .06)
@@ -126,6 +213,7 @@ def ap_off_beep():
 
 
 def start_breathing_blue(t=2000):
+    """Blue breathing cycle for waiting for WiFi/network connection."""
     s = front_sonar
     s.set_rgb_mode(1)
     s.write_breath_register(s.REG_RGB1_R_BREATHING_CYCLE, 0)
@@ -137,6 +225,7 @@ def start_breathing_blue(t=2000):
 
 
 def start_breathing_green(t=3000):
+    """Green breathing cycle to signal HW-AP mode."""
     s = front_sonar
     s.set_rgb_mode(1)
     s.write_breath_register(s.REG_RGB1_R_BREATHING_CYCLE, 0)
@@ -154,6 +243,10 @@ def startup():
 
 
 def conn_waiting():
+    """Startup script for waiting for network connection.
+    Ignores HW-AP connections.
+    If HW-AP is detected, breath green and stop waiting.
+    """
     buttonman.TaskManager.register_stoppable()
     start_breathing_blue()
     print("Waiting for network connection...")
@@ -172,6 +265,12 @@ def conn_waiting():
 
 
 def wifi_waiting(min_time=2):
+    """Script for waiting for WiFi connection.
+
+    Intended to be used with the `buttonman` module,
+    so ``min_time`` is a wait time before checking for wifi connection,
+    so the user has a chance to see the blue indicator before we turn it off.
+    """
     buttonman.TaskManager().register_stoppable()
     start_breathing_blue()
     print(f"Waiting for wifi connection...")
@@ -184,6 +283,10 @@ def wifi_waiting(min_time=2):
 
 
 def hwap_waiting():
+    """Script for waiting for HW-AP connection.
+
+    Intended to be used with the `buttonman` module.
+    """
     buttonman.TaskManager().register_stoppable()
     start_breathing_green()
     print("Waiting for HW-AP connection...")
@@ -195,10 +298,13 @@ def hwap_waiting():
         waitif(0.5)
         i = i  # explicit assignment to avoid code checker warning
     if i < 4:
+        # If it finished too early, breath green one more cycle
+        # so that the user has a chance to see.
         breath_green_wait()
 
 
 def breath_green_wait(ms=3000):
+    """Breath a single green cycle. Blocking."""
     buttonman.TaskManager().register_stoppable()
     front_sonar.set_rgb_mode(0)
     front_sonar.fill_color(0x00FF00)
@@ -209,6 +315,7 @@ def breath_green_wait(ms=3000):
     front_sonar.fill_color(0)
 
 
+#: Dispatch table for actions that this script can be called with.
 actions = {
     'startup': startup,
     'conn_waiting': conn_waiting,

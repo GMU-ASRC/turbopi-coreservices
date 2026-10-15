@@ -1,3 +1,12 @@
+"""
+TurboPi discovery service.
+
+This service is intended to be run on the Raspberry Pi itself.
+It listens for magic IPV4 broadcast UDP packets on port 9027 and responds
+with the serial number and hostname of the Raspberry Pi.
+"""
+
+
 import re
 import socket
 import argparse

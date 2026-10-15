@@ -1,3 +1,9 @@
+"""
+TaskManager and ButtonManager class for managing button presses and releases.
+
+"""
+
+
 # from nt import stat
 import os
 import sys
@@ -399,6 +405,8 @@ class PushStateMachine(statemachine.StateMachine):
 
 
 class ActionMachine(statemachine.StateMachine):
+    """Keeps track of button clicks and holds and performs the correct action."""
+    # states
     idle = statemachine.State(initial=True)
     invalid = statemachine.State()
     c = statemachine.State()
@@ -412,6 +420,9 @@ class ActionMachine(statemachine.StateMachine):
     ccH = statemachine.State()
     cccH = statemachine.State()
 
+    # transitions (these get sent to the state machine)
+    # ---
+    # add single click
     b2_add_c = invalid.to.itself()
     b2_add_c |= idle.to(c)
     b2_add_c |= c.to(cc)
@@ -421,6 +432,7 @@ class ActionMachine(statemachine.StateMachine):
     b2_add_c |= ccccc.to(cccccc)
     b2_add_c |= invalid.from_(cccccc, H, cH, ccH, cccH)
 
+    # add hold
     b2_add_H = invalid.to.itself()
     b2_add_H |= idle.to(H, after='do_1H')
     b2_add_H |= c.to(cH, after='do_2H')
@@ -428,6 +440,7 @@ class ActionMachine(statemachine.StateMachine):
     b2_add_H |= ccc.to(cccH, after='do_4H')
     b2_add_H |= invalid.from_(cccc, ccccc, cccccc, H, cH, ccH, cccH)
 
+    # reset command (button unpressed for long enough)
     reset = invalid.to(idle)
     reset |= idle.to.itself()
     reset |= idle.from_(c, after='do_1c')

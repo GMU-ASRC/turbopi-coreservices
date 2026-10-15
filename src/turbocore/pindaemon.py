@@ -1,3 +1,8 @@
+"""
+Communication primitives for controlling a single pin IO.
+"""
+
+
 import os
 import stat
 import struct
@@ -8,18 +13,19 @@ from typing import Callable
 ISNT = os.name == 'nt'
 ISROOT = not ISNT and os.geteuid() == 0
 
-
+# https://docs.python.org/3/library/struct.html#format-characters
 BYTEORDER = 'little'
 BOC = '<' if BYTEORDER == 'little' else '>'  # byte order character for struct
-# packet format: (header)[, binary data]
-# (cmd, pin, datasize)[, data]
+# packet format:
+# (   HEADER_FORMAT  )[, binary data]
+# (cmd, pin, datasize)[, binary data]
 HEADER_FORMAT = BOC + f'shH'  # char, short, ushort (short is 2 bytes)
 HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
+
 
 #
 # client/lib
 #
-
 
 def cannot_write_pipe(path):
     try:
@@ -38,6 +44,7 @@ def cannot_write_pipe(path):
 
 
 def write_pin_cmd(path: str | os.PathLike, pin: int, cmd: bytes, data=b''):
+    """Client-side APIs will call this to send commands to the daemon pipe"""
     header = struct.pack(HEADER_FORMAT, cmd, pin, len(data))
     packet = header + data
     if cannot_write_pipe(path):
@@ -52,6 +59,7 @@ def write_pin_cmd(path: str | os.PathLike, pin: int, cmd: bytes, data=b''):
 
 
 def mkpipe(name: str | os.PathLike):
+    """Make named pipe and set permissions."""
     directory = gettempdir()
     path = os.path.join(directory, name)
 
@@ -73,27 +81,32 @@ def mkpipe(name: str | os.PathLike):
 
 
 def unpack_packet_start(actions, remainder, size_limit=2000):
+    """Recursively unpack lines received into header, data tuples."""
+    # get header for first line
     header = remainder[:HEADER_SIZE]
     remainder = remainder[HEADER_SIZE:]
     if len(header) != HEADER_SIZE:
         # not enough data to continue. bail out.
         return actions
     action, pin, size = struct.unpack(HEADER_FORMAT, header)
+    # split into data for this packet and any remaining packets
     packed_data = remainder[:size]
     remainder = remainder[size:]
     if len(packed_data) < size or size > size_limit:
         # packet is lying/incomplete. Possible corruption.
         return actions
     actions.append((action, pin, packed_data))
-    if remainder:
+    if remainder:  # more data to unpack
         return unpack_packet_start(actions, remainder, size_limit)
-    else:
+    else:  # no more data to unpack, stop recursion
         return actions
 
 
 def loop_read(path: str | os.PathLike, func: Callable):
     i = 0
-    with open(path, "rb") as pipe:
+    with open(path, "rb") as pipe:  # blocking
+        # note: data may be lost if the daemon closes the pipe.
+        # i.e. don't leave this context manager or else...
         while True:
             try:
                 data = pipe.read()

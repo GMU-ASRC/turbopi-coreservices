@@ -8,10 +8,47 @@ from .pindaemon import write_pin_cmd
 
 
 def rgbw_to_int(r, g, b, w=0):
+    """Pack 8-bit r, g, b, w(optional) values into an integer
+
+    Each r, g, b, w should be in the range 0-255.
+
+    Parameters
+    ----------
+    r : int
+    g : int
+    b : int
+    w : int, optional
+
+    Returns
+    -------
+    int
+    """
     return int.from_bytes(struct.pack('>BBBB', w, r, g, b), byteorder='big')
 
 
 def set_pixel(pin, i, r=0, g=None, b=None, w=None):
+    """Command the daemon to set a single pixel color and update the strip.
+
+    You can either provide a single integer for the color, or three separate
+    integers for r, g, and b.
+
+    Parameters
+    ----------
+    pin : int
+        Pin number of the strip.
+    i : int
+        Pixel number in the strip.
+    r : int, optional
+    g : int, optional
+    b : int, optional
+    w : int, optional
+
+    Raises
+    ------
+    NotImplementedError
+        raised if w is not None
+    ValueError
+    """
     CMD = b'S'
     if (g, b, w) == (None, None, None):
         rgb = r
@@ -28,11 +65,36 @@ def set_pixel(pin, i, r=0, g=None, b=None, w=None):
 
 
 def set_pixels(pin, array):
-    # four array formats are supported:
-    # 1. [(i, rgbw_int), ...]
-    # 2. [(i, (r, g, b, [w])), ...]
-    # 3. [(r, g, b, [w]), ...]
-    # 4. [rgbw_int, ...]
+    """Command the daemon to set the color of multiple pixels and update the strip.
+
+    Four array formats are supported:
+    1. [(i, rgbw_int), ...]
+    2. [(i, (r, g, b, [w])), ...]
+    3. [(r, g, b, [w]), ...]
+    4. [rgbw_int, ...]
+
+    Parameters
+    ----------
+    pin : int
+        Pin number of the strip.
+    array : Sequence
+        Iterable of colors. Each color is either an RGB/W int or a tuple of (pixel_index, color).
+
+    Raises
+    ------
+    TypeError
+        raised if type(array) is not in (tuple, list)
+    ValueError
+        raised if all elements of array are not in (int, tuple)
+
+    Examples
+    --------
+    >>> # these are all equivalent commands to set the two pixels to [red, green]
+    >>> set_pixels(12, [(0, 0xFF0000), (1, 0x00FF00)])
+    >>> set_pixels(12, [(0, (255, 0, 0)), (1, (0, 255, 0))])
+    >>> set_pixels(12, [(255, 0, 0), (0, 255, 0)])
+    >>> set_pixels(12, [0xFF0000, 0x00FF00])
+    """
 
     cmd = b'a'  # for addressed
     if all(isinstance(obj, int) for obj in array):  # case 4
@@ -59,6 +121,25 @@ def setup(
     channel: int = 0,
     strip_type: int = rgbd.WS2811_STRIP_GRB,
 ):
+    """Command the daemon to setup a strip object.
+
+    .. danger::
+        Setting the wrong DMA channel may brick your Pi or SD card.
+        See https://github.com/jgarff/rpi_ws281x#important-warning-about-dma-channels
+
+    Parameters
+    ----------
+    pin : int
+        Pin number of the strip.
+    num_leds : int
+        Number of LEDs on the strip.
+    freq_hz : int, default=800000
+    dma : int, default=10
+    invert : bool, default=False
+    brightness : int, default=120
+    channel : int, default=0
+    strip_type : int, default=rgbd.WS2811_STRIP_GRB
+    """
     cmd = b'N'
     fmts = DATA_FORMATS[cmd]
     data = (num_leds, freq_hz, dma, invert, brightness, channel, strip_type)
@@ -75,4 +156,5 @@ def setup_default_pixels(
     channel=0,
     invert=False,
 ):
+    """Convenience command to setup the rasadapter's built-in two neopixels."""
     setup(pin, n, f, dma_channel, invert, brightness, channel)

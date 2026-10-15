@@ -1,4 +1,19 @@
 #!/usr/bin/python3
+"""
+Stop registered programs, motors, buzzer, and LEDs.
+
+This is registered to the `stop` alias.
+
+.. code-block:: bash
+
+    $ stop
+
+Sends a terminate signal to all programs
+registered with `buttonman.TaskManager.register_stoppable()`.
+
+Cycles motors off, silences buzzer, and turns off the RGB LEDs on the rasadapter and sonar.
+"""
+
 import time
 from turbocore import wsrgb, set_buzzer
 from rasadapter4 import motors, front_sonar
