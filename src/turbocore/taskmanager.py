@@ -141,7 +141,11 @@ class TaskManager:
         record = self.read_record(fpath)  # may return error
 
         if (process := self.pid_matches_process(pid, record)):  # Falsy if error retrieving record
-            process.terminate()  # ask nicely
+            try:
+                process.terminate()  # ask nicely
+            except psutil.AccessDenied as err:
+                print(err)
+                return err
             # if timeout is valid, BLOCK, wait, and then kill.
             if isinstance(timeout, (float, int)) and timeout > 0:
                 try:
