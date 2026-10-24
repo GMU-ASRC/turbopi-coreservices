@@ -5,6 +5,7 @@ if [ "$(id -u)" -ne 0 ]; then
         exit 1
 fi
 
+# TODO: allow specifying user
 BASHRC='/home/pi/.bashrc'
 
 function update_bashrc {
@@ -52,26 +53,13 @@ add_core_service buzzerd.service
 add_core_service startup_beep.service
 echo
 echo 'Checking if aliases already installed...'
-update_bashrc "alias batt='/turbopy/.venv/bin/python -m turbocore.battchk'"
-if [ $? -eq 0 ]; then
-    echo 'Added alias for battery check: batt'
-else
-    echo 'Alias already exists for battery check: batt'
-fi
-if command -v fish &> /dev/null; then
-    fish -c "alias --save batt '/turbopy/.venv/bin/python -m turbocore.battchk'"
-    su pi -c "fish -c \"alias --save batt '/turbopy/.venv/bin/python -m turbocore.battchk'\""
-fi
-update_bashrc "alias stop='sudo /turbopy/.venv/bin/python -m turbocore.stop'"
-if [ $? -eq 0 ]; then
-    echo 'Added alias for stop'
-else
-    echo 'Alias already exists for stop'
-fi
-if command -v fish &> /dev/null; then
-    fish -c "alias --save stop 'sudo /turbopy/.venv/bin/python -m turbocore.stop'"
-    su pi -c "fish -c \"alias --save stop '/turbopy/.venv/bin/python -m turbocore.stop'\""
-fi
+update_bashrc "alias batt='/turbopy/.venv/bin/python -m turbocore.battchk'" \
+&& echo 'Added alias for battery check: batt' \
+|| echo 'Alias already exists for battery check: batt'
+update_bashrc "alias stop='sudo /turbopy/.venv/bin/python -m turbocore.stop'" \
+&& echo 'Added alias for stop: stop' \
+|| echo 'Alias already exists for stop: stop'
+source /turbopy/core/scripts/add_fish_aliases.sh
 
 echo
 echo Done!
