@@ -6,7 +6,10 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # TODO: allow specifying user
-BASHRC='/home/pi/.bashrc'
+U=${U:-$1}
+U=${U:-pi}
+DEFAULT_BASHRC="/home/$U/.bashrc"
+BASHRC=${BASHRC:-$DEFAULT_BASHRC}
 
 function update_bashrc {
     LINE=$1
@@ -60,9 +63,9 @@ update_bashrc "alias stop='sudo /turbopy/.venv/bin/python -m turbocore.stop'" \
 && echo 'Added alias for stop: stop' \
 || echo 'Alias already exists for stop: stop'
 if [ -f ./add_fish_aliases.fish ]; then
-    source ./add_fish_aliases.fish
+    source ./add_fish_aliases.fish $U
 elif [ -f /turbopy/core/scripts/add_fish_aliases.sh ]; then
-    source /turbopy/core/scripts/add_fish_aliases.sh
+    source /turbopy/core/scripts/add_fish_aliases.sh $U
 fi
 
 echo
