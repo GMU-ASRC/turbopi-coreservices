@@ -61,7 +61,7 @@ update_bashrc "alias stop='sudo /turbopy/.venv/bin/python -m turbocore.stop'" \
 || echo 'Alias already exists for stop: stop'
 if [ -f ./add_fish_aliases.fish ]; then
     source ./add_fish_aliases.fish
-else if [ -f /turbopy/core/scripts/add_fish_aliases.sh ]; then
+elif [ -f /turbopy/core/scripts/add_fish_aliases.sh ]; then
     source /turbopy/core/scripts/add_fish_aliases.sh
 fi
 
