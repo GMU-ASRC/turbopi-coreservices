@@ -59,7 +59,11 @@ update_bashrc "alias batt='/turbopy/.venv/bin/python -m turbocore.battchk'" \
 update_bashrc "alias stop='sudo /turbopy/.venv/bin/python -m turbocore.stop'" \
 && echo 'Added alias for stop: stop' \
 || echo 'Alias already exists for stop: stop'
-source /turbopy/core/scripts/add_fish_aliases.sh
+if [ -f ./add_fish_aliases.fish ]; then
+    source ./add_fish_aliases.fish
+else if [ -f /turbopy/core/scripts/add_fish_aliases.sh ]; then
+    source /turbopy/core/scripts/add_fish_aliases.sh
+fi
 
 echo
 echo Done!
