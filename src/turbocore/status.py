@@ -261,6 +261,7 @@ def conn_waiting():
         elif i > 5 and get_interface_conname('wlan0') == 'HW-AP':
             ap_beep()
             breath_green_wait()
+            break
         waitif(0.5)
 
 
